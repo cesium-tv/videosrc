@@ -3,22 +3,32 @@ from datetime import datetime
 
 
 @dataclass
+class Channel:
+    title: str
+    url: str
+    name: str = None
+    description: str = None
+    poster: str = None
+
+
+@dataclass
 class VideoSource:
+    original: dict
     width: int
     height: int
-    fps: int
     size: int
     url: str
-    original: dict
+    fps: int = None
 
 
 @dataclass
 class Video:
     extern_id: str
+    original: dict
     title: str
     poster: str
     duration: int
-    original: dict
     published: datetime
-    tags: list[str]
     sources: list[VideoSource]
+    description: str = None
+    tags: list[str] = list

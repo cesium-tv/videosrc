@@ -2,7 +2,7 @@ import re
 import json
 import asyncio
 import logging
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import pyppeteer
 from pyppeteer.errors import PyppeteerError
@@ -149,6 +149,11 @@ class TimcastCrawler:
             self.seen = set(value)
         else:
             self.seen = value['seen']
+
+    @staticmethod
+    def check_url(url):
+        urlp = urlparse(url)
+        return urlp.netloc.endswith('timcast.com')
 
     def crawl(self, url):
         auth = TimcastAuth(self.url).login(options.credentials)
