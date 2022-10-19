@@ -8,7 +8,6 @@ from pprint import pprint
 from aiohttp.hdrs import METH_GET
 from aiohttp_scraper import ScraperSession
 
-from vidsrc.auth.peertube import PeerTubeAuth
 from vidsrc.models import Channel, Video, VideoSource
 
 
@@ -46,6 +45,7 @@ def parse_channel_name(url):
 class PeerTubeCrawler:
     def __init__(self, state=None, ChannelModel=Channel, VideoModel=Video,
                  VideoSourceModel=VideoSource):
+        self.auth = {}
         self.state = state or { 'start': 0 }
         self.ChannelModel = ChannelModel
         self.VideoModel = VideoModel
@@ -59,7 +59,7 @@ class PeerTubeCrawler:
         if urlp.path.startswith('/video-channels/'):
             return True
 
-    async def _iter_videos(self, url, auth):
+    async def _iter_videos(self, url):
         url += '/videos'
         async with ScraperSession() as s:
             results = await s.get_json(url, params={
@@ -67,7 +67,7 @@ class PeerTubeCrawler:
                 'count': 25,
                 'sort': '-publishedAt',
                 'skipCount': 'true',
-            }, **auth)
+            }, **self.auth)
 
         urlp = urlparse(url)
         for result in results['data']:
@@ -76,7 +76,7 @@ class PeerTubeCrawler:
                 urlp.netloc,
                 f"/api/v1/videos/{result['shortUUID']}", '', '', ''))
             async with ScraperSession() as s:
-                obj = await s.get_json(url, **auth)
+                obj = await s.get_json(url, **self.auth)
             files = obj.pop('files')
 
             sources = []
@@ -107,12 +107,10 @@ class PeerTubeCrawler:
             self.state = { 'start': self.state['start'] + 1 }
             yield video
 
-    async def _auth(self, credentials):
+    async def login(self, credentials):
         pass
 
     async def crawl(self, url, options=None):
-        auth = await self._auth(options['credentials']) if options and 'credentials' in options \
-            else {}
         urlp, channel_name = parse_channel_name(url)
 
         # NOTE: We are assuming the channel name is local to the instance
@@ -126,7 +124,7 @@ class PeerTubeCrawler:
             f'api/v1/video-channels/{channel_name}', '', '', ''))
 
         async with ScraperSession() as s:
-            results = await s.get_json(url, **auth)
+            results = await s.get_json(url, **self.auth)
 
         channel = self.ChannelModel(
             name=channel_name,
@@ -134,4 +132,4 @@ class PeerTubeCrawler:
             url=results['url'],
         )
 
-        return channel, self._iter_videos(url, auth)
+        return channel, self._iter_videos(url)

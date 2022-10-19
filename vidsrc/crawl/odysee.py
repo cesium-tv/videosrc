@@ -17,6 +17,7 @@ API_URL = 'https://api.na-backend.odysee.com/api/v1/proxy'
 class OdyseeCrawler:
     def __init__(self, state=None, ChannelModel=Channel, VideoModel=Video,
                  VideoSourceModel=VideoSource, api_url=API_URL):
+        self.auth = None
         self.state = state
         self.ChannelModel = ChannelModel
         self.VideoModel = VideoModel
@@ -44,7 +45,7 @@ class OdyseeCrawler:
                 })
         return (await r.json())['result']
 
-    async def _auth(self):
+    async def login(self):
         async with ScraperSession() as s:
             r = await s._request(
                 METH_POST,
@@ -54,7 +55,7 @@ class OdyseeCrawler:
                     'language': 'en',
                     'app_id': 'odyseecom692EAWhtoqDuAfQ6KHMXxFxt8tkhmt7sfprEMHWKjy5hf6PwZcHDV542V',
             })
-        self.auth_token = (await r.json())['auth_token']
+        self.auth = (await r.json())['auth_token']
 
     # {
     #     "address": "bMyDG3xgFUK4fao4dU8jq1THhEGhJr5z55",

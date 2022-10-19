@@ -467,7 +467,10 @@ class OdyseeTestCase(IsolatedAsyncioTestCase):
     def tearDown(self):
         self.server.stop()
 
-    async def test_odysee(self):
+    async def test_login(self):
+        pass #  await self.crawler.login()
+
+    async def test_crawl(self):
         channel, videos = await self.crawler.crawl('https://odysee.com/@timcast:c')
         videos = [v async for v in videos]
         self.assertEqual('timcast', channel.name)

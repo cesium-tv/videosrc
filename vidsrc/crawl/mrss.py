@@ -10,7 +10,7 @@ from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
 from vidsrc.models import Channel, Video, VideoSource
-from vidsrc.utils import MediaInfo
+from vidsrc.utils import MediaInfo, basic_auth
 
 
 LOGGER = logging.getLogger(__name__)
@@ -29,6 +29,9 @@ class MRSSCrawler:
         self.ChannelModel = ChannelModel
         self.VideoModel = VideoModel
         self.VideoSourceModel = VideoSourceModel
+
+    async def login(self, username, password):
+        self.auth = basic_auth(username, password)
 
     @staticmethod
     def check_url(url):

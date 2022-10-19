@@ -1,6 +1,8 @@
 import re
 import types
 import asyncio
+
+from base64 import b64encode
 from numbers import Number
 from fractions import Fraction
 from datetime import datetime
@@ -13,6 +15,14 @@ from os.path import splitext, basename
 import av
 import requests
 from bs4 import BeautifulSoup
+
+
+def basic_auth(username, password):
+    return {
+        'headers': {
+            'Authorization': b64encode(f'{username}:{password}'.encode()),
+        },
+    }
 
 
 def isiterable(o):

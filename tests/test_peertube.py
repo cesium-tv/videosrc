@@ -410,6 +410,9 @@ class PeerTubTestCase(IsolatedAsyncioTestCase):
     def tearDown(self):
         self.server.stop()
 
+    async def test_login(self):
+        pass #  await self.crawler.login()
+
     async def test_peertube(self):
         channel, videos = await self.crawler.crawl(self.server.url('/c/btimby_channel@cesium.tv:80'))
         videos = [v async for v in videos]

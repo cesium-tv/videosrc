@@ -72,15 +72,15 @@ class MRSSTestCase(IsolatedAsyncioTestCase):
         self.crawler = MRSSCrawler()
         self.server = ResponsesServer()
         self.server.start()
-        files = []
+        self.files = []
         for path in PATHS:
             f = (
                     self.server.url(path),
                     open(pathjoin(BASE_PATH, 'videos', basename(path)), 'rb'),
                 )
-            files.append(f)
+            self.files.append(f)
             self.server.get(f[0], status=200, body=f[1])
-        mrss = MRSS % (files[0][0], files[1][0])
+        mrss = MRSS % (self.files[0][0], self.files[1][0])
         self.server.get(
             self.server.url(),
             status=200,
@@ -89,8 +89,14 @@ class MRSSTestCase(IsolatedAsyncioTestCase):
 
     def tearDown(self):
         self.server.stop()
+        for f in self.files:
+            f[1].close()
 
-    async def test_mrss(self):
+    async def test_login(self):
+        await self.crawler.login('foobar', 'quux')
+        self.assertNotEqual({}, self.crawler.auth)
+
+    async def test_crawl(self):
         channels, videos = await self.crawler.crawl(self.server.url('/'))
         videos = [v async for v in videos]
         self.assertEqual(2, len(videos))

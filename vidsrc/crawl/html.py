@@ -1,4 +1,5 @@
 import logging
+
 from urllib.parse import urljoin
 from hashlib import md5
 from email.utils import parsedate_to_datetime
@@ -8,7 +9,7 @@ from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
 from vidsrc.models import Channel, Video, VideoSource
-from vidsrc.utils import dict_repr, url2title, MediaInfo
+from vidsrc.utils import dict_repr, url2title, MediaInfo, basic_auth
 
 
 LOGGER = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ LOGGER.addHandler(logging.NullHandler())
 class HTMLCrawler:
     def __init__(self, state=None, ChannelModel=Channel, VideoModel=Video,
                  VideoSourceModel=VideoSource):
+        self.auth = {}
         self.state = state
         self.ChannelModel = ChannelModel
         self.VideoModel = VideoModel
@@ -28,6 +30,9 @@ class HTMLCrawler:
         # NOTE: This crawler is too generalized to claim a url. It will be
         # chosen as a default if no other crawler claims a url.
         return False
+
+    async def login(self, username, password):
+        self.auth = basic_auth(username, password)
 
     async def _iter_videos(self, url, soup):
         for a in soup.find_all('a'):
@@ -61,7 +66,7 @@ class HTMLCrawler:
 
     async def crawl(self, url, options=None):
         async with ScraperSession() as s:
-            r = await s._request(METH_GET, url)
+            r = await s._request(METH_GET, url, **self.auth)
             try:
                 self.state = {
                     'Last-Modified': parsedate_to_datetime(

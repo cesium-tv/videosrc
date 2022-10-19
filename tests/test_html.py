@@ -75,6 +75,10 @@ class HTMLTestCase(IsolatedAsyncioTestCase):
     def tearDown(self):
         self.server.stop()
 
+    async def test_login(self):
+        await self.crawler.login('foobar', 'quux')
+        self.assertNotEqual({}, self.crawler.auth)
+
     async def test_crawl(self):
         channel, videos = await self.crawler.crawl(self.server.url())
         videos = [v async for v in videos]

@@ -10,7 +10,6 @@ from pprint import pprint
 from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
-from vidsrc.auth.rumble import RumbleAuth
 from vidsrc.models import Channel, Video, VideoSource
 from vidsrc.utils import sync_iter
 
@@ -49,7 +48,7 @@ class RumbleCrawler:
         urlp = urlparse(url)
         return urlp.netloc.endswith('rumble.com')
 
-    async def _crawl_videos(self, url, page):
+    async def _iter_videos(self, url, page):
         for li in page.find_all('li', class_='video-listing-entry'):
             url = urljoin(url, li.article.a['href'])
             video_details = await get_video_details(url)
@@ -90,4 +89,4 @@ class RumbleCrawler:
             poster=poster,
         )
 
-        return channel, self._crawl_videos(url, page)
+        return channel, self._iter_videos(url, page)
