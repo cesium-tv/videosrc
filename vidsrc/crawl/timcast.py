@@ -1,15 +1,23 @@
 import re
+import time
 import json
 import asyncio
 import logging
+
 from urllib.parse import urljoin, urlparse
+from hashlib import md5
+from datetime import datetime
+from pprint import pprint
 
 import pyppeteer
 from pyppeteer.errors import PyppeteerError
+from aiohttp.hdrs import METH_HEAD
 from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
 from vidsrc.models import Channel, Video, VideoSource
+from vidsrc.utils import get_tag_text
+from vidsrc.crawl.rumble import get_embed_details, parse_date
 
 
 LOGGER = logging.getLogger(__name__)
@@ -40,38 +48,21 @@ def _no_images(request):
         request.continue_()
 
 
-
 class TimcastCrawler:
     def __init__(self,  state=None, ChannelModel=Channel,
                  VideoModel=Video, VideoSourceModel=VideoSource):
         self.auth = {}
-        self.seen = set()
-        if state is not None:
-            self.state = state
+        self.state = state
         self.ChannelModel = ChannelModel
         self.VideoModel = VideoModel
         self.VideoSourceModel = VideoSourceModel
-
-    @property
-    def state(self):
-        return { seen: list(self.seen) }
-
-    @state.setter
-    def state(self, value):
-        if isinstance(value, (set, list)):
-            self.seen = set(value)
-        else:
-            self.seen = value['seen']
 
     @staticmethod
     def check_url(url):
         urlp = urlparse(url)
         return urlp.netloc.endswith('timcast.com')
 
-    async def _login(self, url, credentials, headless=True, timeout=2000):
-        username = credentials['username']
-        password = credentials['password']
-
+    async def _login(self, url, username, password, headless=True, timeout=2000):
         browser = await pyppeteer.launch(
             headless=headless,
             args=[
@@ -90,37 +81,35 @@ class TimcastCrawler:
         try:
             await page.setViewport({ 'width': 1366, 'height': 768 })
 
-            LOGGER.debug('opening url: %s', url)
+            LOGGER.debug('Opening url: %s', url)
             await page.goto(url, timeout=timeout, waitFor='networkidle2')
 
-            LOGGER.debug('typing')
+            LOGGER.debug('Typing')
             await page.type(U_FIELD, username)
             await page.type(P_FIELD, password)
 
-            LOGGER.debug('clicking submit')
+            LOGGER.debug('Clicking submit')
             await page.click(SUBMIT)
 
             cookieStr = []
             for cookie in await page.cookies():
                 cookieStr.append(f"{cookie['name']}={cookie['value']}")
-            return {'cookies': '; '.join(cookieStr)}
+            return {'headers': {'Cookies': '; '.join(cookieStr)}}
 
         finally:
             await page.close()
             await browser.close()
 
-
-    async def login(self, url, credentials, headless=True, retry=3, timeout=2000):
+    async def login(self, url, username, password, headless=True, retry=3, timeout=2000):
         url = urljoin(url, '/login/')
-        loop = asyncio.get_event_loop()
 
         for i in range(1, 1 + retry):
             try:
-                LOGGER.debug('Login attempt %i', i + 1)
+                LOGGER.debug('Login attempt %i', i)
                 self.auth = await self._login(
-                    url, credentials, headless=headless, retry=retry,
-                    timeout=timeout
+                    url, username, password, headless=headless, timeout=timeout
                 )
+                break
 
             except (PyppeteerError, asyncio.TimeoutError):
                 if i == retry:
@@ -129,98 +118,72 @@ class TimcastCrawler:
                 LOGGER.exception('Login failed, retrying')
                 time.sleep(3 ** i)
 
-    async def _iter_videos(self, url, options):
-        whitelist = options.get('whitelist', [])
-        limit = options.get('limit')
+    async def _iter_videos(self, url, page):
+        grid = page.find('div', class_='t-grid:s:fit:2 t-grid:m:fit:4 t-pad:25pc:top')
+        for article in grid.find_all('div', class_='article'):
+            date = article.find('div', class_='summary').div.text
+            (m, d, y) = map(int, date.split('.'))
+            state = datetime(y + 2000, m, d)
+            if self.state and self.state > state:
+                LOGGER.info('Video published before given state')
+                break
 
-        seen = set()
-        videos = []
+            video_link = article.find('a', class_='image')
+            thumbnail = video_link.img['src']
+            description = video_link.img['alt']
+            video_page_url = video_link['href']
+            video_page_url = urljoin(url, urlparse(video_page_url).path)
+            async with ScraperSession() as s:
+                video_page = BeautifulSoup(
+                    await s.get_html(video_page_url, **self.auth),
+                    'html.parser')
+            iframe_tag = video_page.find('iframe')
+            embed_url = iframe_tag['src']
+            video_details = await get_embed_details(embed_url)
+            sources = [
+                self.VideoSourceModel(
+                    width=src['meta']['w'],
+                    height=src['meta']['h'],
+                    size=src['meta']['size'],
+                    url=src['url'],
+                    original=src,
+                ) for src in video_details['ua']['mp4'].values()
+            ]
+            yield self.VideoModel(
+                extern_id=md5(video_page_url.encode()).hexdigest(),
+                title=description,
+                poster=thumbnail,
+                duration=video_details['duration'],
+                published=parse_date(video_details['pubDate']),
+                original=str(article),
+                sources=sources,
+            ), state
 
-        async def _handle(url, depth):
-            url = url.split('#')[0]
-            if depth is not None:
-                if depth == 0:
-                    raise DepthReached()
-                depth -= 1
-
-            if url in seen:
-                LOGGER.debug('Skipping duplicate url')
-                return
-            LOGGER.info('URL: %s', url)
-            seen.add(url)
-
-            async with ScraperSession() as session:
-                r = await session.get_html(url, **self.auth)
-                LOGGER.debug('Got %i bytes', len(r))
-
-            soup = BeautifulSoup(r, 'html.parser')
-
-            srcSeen = set()
-            for iframe in soup.find_all('iframe'):
-                LOGGER.debug('Found iframe')
-                src = iframe['src']
-                LOGGER.info('src: %s', src)
-                if src in srcSeen:
-                    LOGGER.debug('Skipping duplicate iframe')
-                    continue
-                if not src or not RUMBLE_DOMAIN.match(src):
-                    LOGGER.debug('Missing or invalid iframe src')
-                    continue
-                srcSeen.add(src)
-
-                async with ScraperSession() as session:
-                    r = await session.get_html(src, **self.auth)
-                    LOGGER.debug('Received %i bytes', len(r))
-
-                m = JSON_EXTRACT.search(r)
-                if not m:
-                    LOGGER.warn(r)
-                    continue
-
-                data = JSON_TRIM.sub(r'\1\2}', m.group(1))
-                try:
-                    videos.append(data)
-                    yield json.loads(data)
-
-                except (TypeError, ValueError) as e:
-                    LOGGER.exception('Invalid json')
-                    LOGGER.warn(data)
-
-            for a in soup.find_all('a'):
-                LOGGER.debug('Found anchor tag')
-                href = a['href']
-                if not href:
-                    LOGGER.debug('Missing or invalid href')
-                    continue
-
-                href = urljoin(url, href)
-                LOGGER.debug('href: %s', href)
-                if href in seen:
-                    LOGGER.debug('Skipping duplicate href')
-                    continue
-
-                if not any([re.match(p, href) for p in whitelist]):
-                    LOGGER.debug('Skipping invalid href')
-                    continue
-
-                if limit is not None:
-                    LOGGER.debug('Video count: %i of %i', len(videos), limit)
-                    if len(videos) >= limit:
-                        raise LimitReached()
-
-                async for v in _handle(href, depth):
-                    yield v
-
-        try:
-            async for v in _handle(url, options.get('depth')):
-                yield v
-
-        except (LimitReached, DepthReached) as e:
-            LOGGER.info(e.args[0])
+    async def _iter_pages(self, url, page):
+        page_num = 1
+        async with ScraperSession() as s:
+            while True:
+                LOGGER.debug('Scraping page %i', page_num)
+                async for video in self._iter_videos(url, page):
+                    yield video
+                page_num += 1
+                page_url = url + f'page/{page_num}/'
+                urlp = urlparse(page_url)
+                if not page.find('a', href=urlp.path[:-1]):
+                    LOGGER.debug('No more pages')
+                    break
+                page = BeautifulSoup(
+                    await s.get_html(page_url, **self.auth), 'html.parser')
 
     async def crawl(self, url, options=None):
-        channel = self.ChannelModel(
+        async with ScraperSession() as s:
+            page = BeautifulSoup(
+                await s.get_html(url, **self.auth), 'html.parser')
+            title = get_tag_text(page, 'h1')
+            channel = self.ChannelModel(
+                url=url,
+                name=title,
+                title=title,
+            )
 
-        )
-
-        return channel, self._iter_videos(url, auth, options)
+        return channel, self._iter_pages(url, page)

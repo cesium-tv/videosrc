@@ -459,10 +459,10 @@ class OdyseeTestCase(IsolatedAsyncioTestCase):
             responses_kwargs={'registry': OrderedRegistry})
         self.server.start()
         self.crawler = OdyseeCrawler(api_url=self.server.url())
-        self.server.post(self.server.url(), status=200, json=RSP0)
-        self.server.post(self.server.url(), status=200, json=RSP1)
-        self.server.post(self.server.url(), status=200, json=RSP2)
-        self.server.post(self.server.url(), status=200, json=RSP3)
+        self.server.post(self.server.url(), json=RSP0)
+        self.server.post(self.server.url(), json=RSP1)
+        self.server.post(self.server.url(), json=RSP2)
+        self.server.post(self.server.url(), json=RSP3)
 
     def tearDown(self):
         self.server.stop()
@@ -472,7 +472,7 @@ class OdyseeTestCase(IsolatedAsyncioTestCase):
 
     async def test_crawl(self):
         channel, videos = await self.crawler.crawl('https://odysee.com/@timcast:c')
-        videos = [v async for v in videos]
+        videos = [v async for v, s in videos]
         self.assertEqual('timcast', channel.name)
         self.assertEqual(2, len(videos))
         self.assertEqual(

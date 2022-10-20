@@ -402,10 +402,16 @@ class PeerTubTestCase(IsolatedAsyncioTestCase):
             responses_kwargs={'registry': OrderedRegistry})
         self.server.start()
         self.crawler = PeerTubeCrawler()
-        self.server.get(self.server.url('/api/v1/video-channels/btimby_channel@cesium.tv:80'), status=200, json=RSP0)
-        self.server.get(self.server.url('/api/v1/video-channels/btimby_channel@cesium.tv:80/videos'), status=200, json=RSP1)
-        self.server.get(self.server.url('/api/v1/videos/iNid2sMo2cZQrJBnipxiXs'), status=200, json=RSP2)
-        self.server.get(self.server.url('/api/v1/videos/cqiZm4MvzSkrFhb5THHRgU'), status=200, json=RSP3)
+        self.server.get(
+            self.server.url('/api/v1/video-channels/btimby_channel@cesium.tv:80'),
+            json=RSP0)
+        self.server.get(
+            self.server.url('/api/v1/video-channels/btimby_channel@cesium.tv:80/videos'),
+            json=RSP1)
+        self.server.get(
+            self.server.url('/api/v1/videos/iNid2sMo2cZQrJBnipxiXs'), json=RSP2)
+        self.server.get(
+            self.server.url('/api/v1/videos/cqiZm4MvzSkrFhb5THHRgU'), json=RSP3)
 
     def tearDown(self):
         self.server.stop()
@@ -415,7 +421,7 @@ class PeerTubTestCase(IsolatedAsyncioTestCase):
 
     async def test_peertube(self):
         channel, videos = await self.crawler.crawl(self.server.url('/c/btimby_channel@cesium.tv:80'))
-        videos = [v async for v in videos]
+        videos = [v async for v, s in videos]
         self.assertEqual('btimby_channel@cesium.tv:80', channel.name)
         self.assertEqual(2, len(videos))
         self.assertEqual('ElephantsDream',videos[0].title)

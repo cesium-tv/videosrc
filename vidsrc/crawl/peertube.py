@@ -5,7 +5,7 @@ from os.path import split as pathsplit
 from datetime import datetime
 from pprint import pprint
 
-from aiohttp.hdrs import METH_GET
+from aiohttp.hdrs import METH_GET, METH_POST
 from aiohttp_scraper import ScraperSession
 
 from vidsrc.models import Channel, Video, VideoSource
@@ -46,7 +46,7 @@ class PeerTubeCrawler:
     def __init__(self, state=None, ChannelModel=Channel, VideoModel=Video,
                  VideoSourceModel=VideoSource):
         self.auth = {}
-        self.state = state or { 'start': 0 }
+        self.state = state or 0
         self.ChannelModel = ChannelModel
         self.VideoModel = VideoModel
         self.VideoSourceModel = VideoSourceModel
@@ -63,7 +63,7 @@ class PeerTubeCrawler:
         url += '/videos'
         async with ScraperSession() as s:
             results = await s.get_json(url, params={
-                'start': self.state['start'],
+                'start': self.state,
                 'count': 25,
                 'sort': '-publishedAt',
                 'skipCount': 'true',
@@ -104,11 +104,26 @@ class PeerTubeCrawler:
                 sources=sources,
             )
 
-            self.state = { 'start': self.state['start'] + 1 }
-            yield video
+            self.state += 1
+            yield video, self.state
 
-    async def login(self, credentials):
-        pass
+    async def login(self, url, username, password):
+        async with ScraperSession() as s:
+            r = await s.get_json(urljoin(url, '/api/v1/oauth-clients/local/'))
+            params = r.json()
+            r = await s._request(METH_POST, urljoin(url, '/api/v1/users/token/'), data={
+                'client_id': params['client_id'],
+                'client_secret': params['client_secret'],
+                'grant_type': 'password',
+                'username': username,
+                'password': password,
+            })
+            token = await r.json()
+        self.auth = {
+            'headers': {
+                'Authorization': f"Bearer {token['access_token']}"
+            }
+        }
 
     async def crawl(self, url, options=None):
         urlp, channel_name = parse_channel_name(url)

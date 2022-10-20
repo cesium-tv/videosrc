@@ -219,7 +219,7 @@ class OdyseeCrawler:
                     sources=[source],
                     original=item,
                 )
-                yield video
+                yield video, self.state
             if len(items) + 1 < int(result['page_size']):
                 break
             break

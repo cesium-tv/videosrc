@@ -14,7 +14,22 @@ from vidsrc.models import Channel, Video, VideoSource
 from vidsrc.utils import sync_iter
 
 
-JSON_EXTRACT = re.compile(r'\w\.\w\["\w{6,7}"\]=({.*}),loaded:\w\(\)')
+# Used to parse JSON out of a block of javascript.
+JSON_EXTRACT = re.compile(r'\w\.\w\["\w{6,7}"\]=({.*?});')
+HTML_ERASE = re.compile(r'<.*>')  # Removes HTML / CSS.
+FUNC_ERASE = re.compile(r',loaded:\w\(\)')  # Removes an function reference.
+
+
+async def get_embed_details(embed_url):
+    async with ScraperSession() as s:
+        embed_page = await s.get_html(embed_url)
+        m = JSON_EXTRACT.search(embed_page)
+        if not m:
+            raise Exception('Could not extract data from javascript')
+        data = m.group(1)
+        data = HTML_ERASE.sub('', data)
+        data = FUNC_ERASE.sub('', data)
+        return json.loads(data)
 
 
 async def get_video_details(url):
@@ -23,11 +38,7 @@ async def get_video_details(url):
         script_tag = video_page.find('script', type='application/ld+json')
         video_details = json.loads(script_tag.text)
         embed_url = video_details[0]['embedUrl']
-        urlp = urlparse(embed_url)
-        embed_url = urljoin(url, urlp.path)
-        embed_page = await s.get_html(embed_url)
-        m = JSON_EXTRACT.search(embed_page)
-        return json.loads(f'{m.group(1)}}}')
+        return await get_embed_details(embed_url)
 
 
 def parse_date(s):
@@ -48,10 +59,17 @@ class RumbleCrawler:
         urlp = urlparse(url)
         return urlp.netloc.endswith('rumble.com')
 
+    async def login(self):
+        pass
+
     async def _iter_videos(self, url, page):
         for li in page.find_all('li', class_='video-listing-entry'):
             url = urljoin(url, li.article.a['href'])
             video_details = await get_video_details(url)
+            published = parse_date(video_details['pubDate'])
+            if self.state and self.state > published:
+                LOGGER.info('Video published before given state')
+                break
             sources = [
                 self.VideoSourceModel(
                     width=src['meta']['w'],
@@ -66,11 +84,11 @@ class RumbleCrawler:
                 title=li.article.h3.text,
                 poster=li.article.img['src'],
                 duration=video_details['duration'],
-                published=parse_date(video_details['pubDate']),
+                published=published,
                 sources=sources,
                 original=str(li),
             )
-            yield str(video)
+            yield video, published
 
     async def crawl(self, url):
         # https://rumble.com/user/vivafrei

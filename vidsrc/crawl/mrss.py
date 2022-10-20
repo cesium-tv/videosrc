@@ -10,16 +10,11 @@ from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
 from vidsrc.models import Channel, Video, VideoSource
-from vidsrc.utils import MediaInfo, basic_auth
+from vidsrc.utils import MediaInfo, basic_auth, get_tag_text
 
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
-
-
-def get_tag_text(o, name):
-    tag = o.find(name)
-    return tag and tag.text
 
 
 class MRSSCrawler:
@@ -82,7 +77,7 @@ class MRSSCrawler:
                 url=url,
                 original={},
             )
-            yield Video(
+            video = Video(
                 extern_id=guid,
                 title=title,
                 description=description,
@@ -97,6 +92,8 @@ class MRSSCrawler:
                     'tag': str(item),
                 },
             )
+            yield video, self.state
+
 # <channel>
 #     <title>Calm Meditation</title>
 #     <link>http://sample-firetv-web-app.s3-website-us-west-2.amazonaws.com</link>

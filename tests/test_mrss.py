@@ -74,31 +74,36 @@ class MRSSTestCase(IsolatedAsyncioTestCase):
         self.server.start()
         self.files = []
         for path in PATHS:
-            f = (
-                    self.server.url(path),
-                    open(pathjoin(BASE_PATH, 'videos', basename(path)), 'rb'),
-                )
+            f = open(pathjoin(BASE_PATH, 'videos', basename(path)), 'rb')
             self.files.append(f)
-            self.server.get(f[0], status=200, body=f[1])
-        mrss = MRSS % (self.files[0][0], self.files[1][0])
+            self.server.get(self.server.url(path), status=200, body=f)
+        mrss = MRSS % (
+            self.server.url(PATHS[0]),
+            self.server.url(PATHS[1])
+        )
         self.server.get(
             self.server.url(),
             status=200,
             body=mrss,
-            headers={'Last-Modified': 'Sat, 15 Oct 2022 03:38:46 GMT', 'Content-Length': str(len(mrss))})
+            headers={
+                'Last-Modified': 'Sat, 15 Oct 2022 03:38:46 GMT',
+                'Content-Length': str(len(mrss))}
+            )
 
     def tearDown(self):
         self.server.stop()
         for f in self.files:
-            f[1].close()
+            f.close()
 
     async def test_login(self):
         await self.crawler.login('foobar', 'quux')
-        self.assertNotEqual({}, self.crawler.auth)
+        self.assertEqual({
+            'headers': {'Authorization': b'Zm9vYmFyOnF1dXg='}
+        }, self.crawler.auth)
 
     async def test_crawl(self):
         channels, videos = await self.crawler.crawl(self.server.url('/'))
-        videos = [v async for v in videos]
+        videos = [v async for v, s in videos]
         self.assertEqual(2, len(videos))
         self.assertEqual('Shade', videos[0].title)
         self.assertEqual(

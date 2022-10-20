@@ -17,6 +17,11 @@ import requests
 from bs4 import BeautifulSoup
 
 
+def get_tag_text(o, name):
+    tag = o.find(name)
+    return tag and tag.text
+
+
 def basic_auth(username, password):
     return {
         'headers': {

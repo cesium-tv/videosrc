@@ -50,7 +50,7 @@ class HTMLCrawler:
                     'video': dict_repr(info.video),
                 },
             )
-            yield self.VideoModel(
+            video = self.VideoModel(
                 extern_id=md5(href.encode()).hexdigest(),
                 title=url2title(href),
                 poster=info.poster(),
@@ -63,6 +63,7 @@ class HTMLCrawler:
                     'headers': dict(info.headers),
                 },
             )
+            yield video, self.state
 
     async def crawl(self, url, options=None):
         async with ScraperSession() as s:

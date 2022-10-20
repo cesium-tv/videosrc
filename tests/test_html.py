@@ -77,11 +77,13 @@ class HTMLTestCase(IsolatedAsyncioTestCase):
 
     async def test_login(self):
         await self.crawler.login('foobar', 'quux')
-        self.assertNotEqual({}, self.crawler.auth)
+        self.assertEqual({
+            'headers': {'Authorization': b'Zm9vYmFyOnF1dXg='}
+        }, self.crawler.auth)
 
     async def test_crawl(self):
         channel, videos = await self.crawler.crawl(self.server.url())
-        videos = [v async for v in videos]
+        videos = [v async for v, s in videos]
         self.assertEqual(5, len(videos))
         self.assertIsNotNone(videos[0].extern_id)
         self.assertEqual('For Bigger Blazes', videos[0].title)
