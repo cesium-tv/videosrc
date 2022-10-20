@@ -1535,3 +1535,6 @@ class TimcastTestCase(IsolatedAsyncioTestCase):
         channel, videos = await self.crawler.crawl(self.server.url())
         videos = [v async for v, s in videos]
         self.assertEqual('Members Only: Timcast IRL', channel.name)
+        self.assertEqual('Members Only: Timcast IRL', channel.title)
+        self.assertEqual(1, len(videos))
+        self.assertEqual(5, len(videos[0].sources))

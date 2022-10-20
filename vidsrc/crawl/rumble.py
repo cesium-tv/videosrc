@@ -93,7 +93,7 @@ class RumbleCrawler:
     async def crawl(self, url):
         # https://rumble.com/user/vivafrei
         urlp = urlparse(url)
-        pparts = pathsplit(urlp.path)
+        pparts = pathsplit(urlp.path.strip('/'))
 
         async with ScraperSession() as s:
             page = BeautifulSoup(await s.get_html(url), 'html.parser')

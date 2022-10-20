@@ -358,7 +358,7 @@ class RumbleTestCase(IsolatedAsyncioTestCase):
             responses_kwargs={'registry': OrderedRegistry})
         self.server.start()
         self.server.get(
-            self.server.url(),
+            self.server.url('/user/vivafrei/'),
             headers={'Content-Type': 'text/html'},
             body=RSP0)
         self.server.get(
@@ -381,5 +381,10 @@ class RumbleTestCase(IsolatedAsyncioTestCase):
         await self.crawler.login()
 
     async def test_crawl(self):
-        channel, videos = await self.crawler.crawl(self.server.url())
+        channel, videos = await self.crawler.crawl(
+            self.server.url('/user/vivafrei/'))
         videos = [v async for v, s in videos]
+        self.assertEqual('vivafrei', channel.name)
+        self.assertEqual('vivafrei', channel.title)
+        self.assertEqual(1, len(videos))
+        self.assertEqual(4, len(videos[0].sources))
