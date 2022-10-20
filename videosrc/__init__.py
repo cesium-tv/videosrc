@@ -1,14 +1,14 @@
 import inspect
 
-import vidsrc.crawl
-from vidsrc.crawl.html import HTMLCrawler
+import videosrc.crawl
+from videosrc.crawl.html import HTMLCrawler
 
 
 def detect_crawler(url):
     crawlers = []
 
-    for attr in dir(vidsrc.crawl):
-        cls = getattr(vidsrc.crawl, attr)
+    for attr in dir(videosrc.crawl):
+        cls = getattr(videosrc.crawl, attr)
         if not inspect.isclass(cls):
             continue
         if callable(getattr(cls, 'check_url', None)):

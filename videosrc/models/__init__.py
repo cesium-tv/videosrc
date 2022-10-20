@@ -4,9 +4,9 @@ from datetime import datetime
 
 @dataclass
 class Channel:
-    title: str
+    name: str
     url: str
-    name: str = None
+    title: str = None
     description: str = None
     poster: str = None
 

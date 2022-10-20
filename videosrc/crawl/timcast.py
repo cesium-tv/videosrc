@@ -15,9 +15,9 @@ from aiohttp.hdrs import METH_HEAD
 from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
-from vidsrc.models import Channel, Video, VideoSource
-from vidsrc.utils import get_tag_text
-from vidsrc.crawl.rumble import get_embed_details, parse_date
+from videosrc.models import Channel, Video, VideoSource
+from videosrc.utils import get_tag_text
+from videosrc.crawl.rumble import get_embed_details, parse_date
 
 
 LOGGER = logging.getLogger(__name__)
@@ -183,7 +183,6 @@ class TimcastCrawler:
             channel = self.ChannelModel(
                 url=url,
                 name=title,
-                title=title,
             )
 
         return channel, self._iter_pages(url, page)

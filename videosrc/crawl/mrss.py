@@ -9,8 +9,8 @@ from aiohttp.hdrs import METH_GET
 from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
-from vidsrc.models import Channel, Video, VideoSource
-from vidsrc.utils import MediaInfo, basic_auth, get_tag_text
+from videosrc.models import Channel, Video, VideoSource
+from videosrc.utils import MediaInfo, basic_auth, get_tag_text
 
 
 LOGGER = logging.getLogger(__name__)
@@ -125,7 +125,7 @@ class MRSSCrawler:
             soup = BeautifulSoup(await r.text(), 'xml')
             tag = soup.find('channel')
             channel = self.ChannelModel(
-                title=tag.title.text,
+                name=tag.title.text,
                 url=url,
                 description=tag.description.text,
                 poster=tag.image.url.text,

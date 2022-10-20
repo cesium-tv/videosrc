@@ -8,7 +8,7 @@ from datetime import datetime
 from aiohttp.hdrs import METH_POST
 from aiohttp_scraper import ScraperSession
 
-from vidsrc.models import Channel, Video, VideoSource
+from videosrc.models import Channel, Video, VideoSource
 
 
 API_URL = 'https://api.na-backend.odysee.com/api/v1/proxy'

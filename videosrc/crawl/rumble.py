@@ -10,8 +10,8 @@ from pprint import pprint
 from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
-from vidsrc.models import Channel, Video, VideoSource
-from vidsrc.utils import sync_iter
+from videosrc.models import Channel, Video, VideoSource
+from videosrc.utils import sync_iter
 
 
 # Used to parse JSON out of a block of javascript.
@@ -101,7 +101,6 @@ class RumbleCrawler:
         thumb = page.find('img', class_='listing-header--thumb')
         poster = thumb.src if thumb else None
         channel = self.ChannelModel(
-            title=pparts[-1],
             name=pparts[-1],
             url=url,
             poster=poster,

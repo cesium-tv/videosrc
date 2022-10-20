@@ -3,7 +3,7 @@ from unittest import IsolatedAsyncioTestCase
 from responses.registries import OrderedRegistry
 from responses_server import ResponsesServer
 
-from vidsrc.crawl.rumble import RumbleCrawler
+from videosrc.crawl.rumble import RumbleCrawler
 
 
 RSP0 = '''
@@ -385,6 +385,5 @@ class RumbleTestCase(IsolatedAsyncioTestCase):
             self.server.url('/user/vivafrei/'))
         videos = [v async for v, s in videos]
         self.assertEqual('vivafrei', channel.name)
-        self.assertEqual('vivafrei', channel.title)
         self.assertEqual(1, len(videos))
         self.assertEqual(4, len(videos[0].sources))

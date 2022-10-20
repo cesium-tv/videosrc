@@ -7,7 +7,7 @@ from http.server import (
     SimpleHTTPRequestHandler as BaseSimpleHTTPRequestHandler
 )
 
-from vidsrc.crawl.html import HTMLCrawler, url2title
+from videosrc.crawl.html import HTMLCrawler, url2title
 
 
 VIDEOS_DIR = pathjoin(dirname(dirname(__file__)), 'videos')
@@ -84,6 +84,7 @@ class HTMLTestCase(IsolatedAsyncioTestCase):
     async def test_crawl(self):
         channel, videos = await self.crawler.crawl(self.server.url())
         videos = [v async for v, s in videos]
+        self.assertEqual('Directory listing for /', channel.name)
         self.assertEqual(5, len(videos))
         self.assertIsNotNone(videos[0].extern_id)
         self.assertEqual('For Bigger Blazes', videos[0].title)

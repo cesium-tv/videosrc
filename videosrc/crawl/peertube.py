@@ -8,7 +8,7 @@ from pprint import pprint
 from aiohttp.hdrs import METH_GET, METH_POST
 from aiohttp_scraper import ScraperSession
 
-from vidsrc.models import Channel, Video, VideoSource
+from videosrc.models import Channel, Video, VideoSource
 
 
 LOGGER = logging.getLogger(__name__)

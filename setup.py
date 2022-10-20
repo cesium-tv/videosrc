@@ -17,7 +17,7 @@ with open(REQUIREMENTS, 'r') as f:
 
 setup(
     name='videosrc',
-    version='0.1.0',
+    version='0.1.1',
     description='Video src crawler',
     long_description=LONG_DESCRIPTION,
     install_requires=INSTALL_REQUIRES,

@@ -3,7 +3,7 @@ from os.path import join as pathjoin, dirname, basename
 
 from responses_server import ResponsesServer
 
-from vidsrc.crawl.mrss import MRSSCrawler
+from videosrc.crawl.mrss import MRSSCrawler
 
 
 BASE_PATH = dirname(dirname(__file__))
@@ -102,8 +102,9 @@ class MRSSTestCase(IsolatedAsyncioTestCase):
         }, self.crawler.auth)
 
     async def test_crawl(self):
-        channels, videos = await self.crawler.crawl(self.server.url('/'))
+        channel, videos = await self.crawler.crawl(self.server.url('/'))
         videos = [v async for v, s in videos]
+        self.assertEqual('Calm Meditation', channel.name)
         self.assertEqual(2, len(videos))
         self.assertEqual('Shade', videos[0].title)
         self.assertEqual(

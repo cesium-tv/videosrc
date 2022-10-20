@@ -4,7 +4,7 @@ import logging
 from pprint import pprint
 from optparse import OptionParser
 
-from vidsrc import detect_crawler
+from videosrc import detect_crawler
 
 
 LOGGER = logging.getLogger('vidsrc')

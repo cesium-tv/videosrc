@@ -8,8 +8,8 @@ from aiohttp.hdrs import METH_GET
 from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
-from vidsrc.models import Channel, Video, VideoSource
-from vidsrc.utils import dict_repr, url2title, MediaInfo, basic_auth
+from videosrc.models import Channel, Video, VideoSource
+from videosrc.utils import dict_repr, url2title, MediaInfo, basic_auth
 
 
 LOGGER = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ class HTMLCrawler:
             soup = BeautifulSoup(await r.text(), 'html.parser')
             title = soup.find('title').text
             channel = self.ChannelModel(
-                title=title,
+                name=title,
                 url=url,
             )
             return channel, self._iter_videos(url, soup)

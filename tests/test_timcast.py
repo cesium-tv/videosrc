@@ -3,7 +3,7 @@ from unittest import IsolatedAsyncioTestCase
 from responses.registries import OrderedRegistry
 from responses_server import ResponsesServer
 
-from vidsrc.crawl.timcast import TimcastCrawler
+from videosrc.crawl.timcast import TimcastCrawler
 
 
 RSP0 = '''
@@ -1535,6 +1535,5 @@ class TimcastTestCase(IsolatedAsyncioTestCase):
         channel, videos = await self.crawler.crawl(self.server.url())
         videos = [v async for v, s in videos]
         self.assertEqual('Members Only: Timcast IRL', channel.name)
-        self.assertEqual('Members Only: Timcast IRL', channel.title)
         self.assertEqual(1, len(videos))
         self.assertEqual(5, len(videos[0].sources))
