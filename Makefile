@@ -1,15 +1,15 @@
-SRC=$(shell find vidsrc/ -name "*.py")
+SRC=$(shell find videosrc/ -name "*.py")
 
 
 /usr/bin/virtualenv:
 	sudo apt install python3-virtualenv
 
 
-dist/vidsrc-?.?.?-*.whl: $(SRC)
+dist/videosrc-?.?.?-*.whl: $(SRC)
 	python3 setup.py bdist_wheel
 
 
-build: dist/vidsrc-?.?.?-*.whl
+build: dist/videosrc-?.?.?-*.whl
 	python3 setup.py bdist_wheel
 
 
@@ -27,7 +27,7 @@ test: .venv
 
 .PHONY: lint
 lint: .venv
-	.venv/local/bin/python3 -m flake8 vidsrc/
+	.venv/local/bin/python3 -m flake8 videosrc/
 
 
 .PHONY: ci
@@ -36,4 +36,4 @@ ci: lint test
 
 .PHONY: clean
 clean:
-	rm -rf dist build vidsrc.egg-info .venv
+	rm -rf dist build videosrc.egg-info .venv

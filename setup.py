@@ -16,7 +16,7 @@ with open(REQUIREMENTS, 'r') as f:
 
 
 setup(
-    name='vidsrc',
+    name='videosrc',
     version='0.1.0',
     description='Video src crawler',
     long_description=LONG_DESCRIPTION,
