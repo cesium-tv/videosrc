@@ -9,7 +9,7 @@ from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
 from videosrc.models import Channel, Video, VideoSource
-from videosrc.utils import dict_repr, url2title, MediaInfo, basic_auth
+from videosrc.utils import dict_repr, url2title, MediaInfo, basic_auth, md5sum
 
 
 LOGGER = logging.getLogger(__name__)
@@ -39,7 +39,9 @@ class HTMLCrawler:
             # NOTE: Link might be absolute.
             href = urljoin(url, a['href'])
             info = MediaInfo(href)
+            guid = md5sum(href)
             source = self.VideoSourceModel(
+                extern_id=guid,
                 width=info.frame.width,
                 height=info.frame.height,
                 fps=info.stream.guessed_rate,
@@ -51,7 +53,7 @@ class HTMLCrawler:
                 },
             )
             video = self.VideoModel(
-                extern_id=md5(href.encode()).hexdigest(),
+                extern_id=guid,
                 title=url2title(href),
                 poster=info.poster(),
                 duration=info.stream.duration,
@@ -80,6 +82,7 @@ class HTMLCrawler:
             soup = BeautifulSoup(await r.text(), 'html.parser')
             title = soup.find('title').text
             channel = self.ChannelModel(
+                extern_id=md5sum(url),
                 name=title,
                 url=url,
             )

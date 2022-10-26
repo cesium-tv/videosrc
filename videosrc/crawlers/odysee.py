@@ -202,6 +202,7 @@ class OdyseeCrawler:
                     int(item['value']['release_time']))
                 stream = await self._make_request('get', { 'uri': item['short_url'] })
                 source = self.VideoSourceModel(
+                    extern_id=item['claim_id'],
                     url=stream['streaming_url'],
                     size=item['value']['source']['size'],
                     width=item['value']['video']['width'],
@@ -209,9 +210,9 @@ class OdyseeCrawler:
                     original=item,
                 )
                 video = self.VideoModel(
+                    extern_id=item['claim_id'],
                     title=item['value']['title'],
                     description=item['value']['description'],
-                    extern_id=item['claim_id'],
                     poster=item['value']['thumbnail']['url'],
                     duration=item['value']['video']['duration'],
                     tags=item['value']['tags'],
@@ -241,6 +242,7 @@ class OdyseeCrawler:
         result = result[lbry_url]
         value = result['value']
         channel = self.ChannelModel(
+            extern_id=result['claim_id'],
             name=channel_name,
             url=url,
             title=value['title'],

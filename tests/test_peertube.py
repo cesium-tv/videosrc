@@ -396,7 +396,7 @@ RSP3 = {'account': {'avatars': [],
  'waitTranscoding': True}
 
 
-class PeerTubTestCase(IsolatedAsyncioTestCase):
+class PeerTubeTestCase(IsolatedAsyncioTestCase):
     def setUp(self):
         self.server = ResponsesServer(
             responses_kwargs={'registry': OrderedRegistry})

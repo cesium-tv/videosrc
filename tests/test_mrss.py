@@ -98,7 +98,7 @@ class MRSSTestCase(IsolatedAsyncioTestCase):
     async def test_login(self):
         await self.crawler.login('foobar', 'quux')
         self.assertEqual({
-            'headers': {'Authorization': b'Zm9vYmFyOnF1dXg='}
+            'headers': {'Authorization': 'Zm9vYmFyOnF1dXg='}
         }, self.crawler.auth)
 
     async def test_crawl(self):

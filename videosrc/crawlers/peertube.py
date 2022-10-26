@@ -9,6 +9,7 @@ from aiohttp.hdrs import METH_GET, METH_POST
 from aiohttp_scraper import ScraperSession
 
 from videosrc.models import Channel, Video, VideoSource
+from videosrc.utils import md5sum
 
 
 LOGGER = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ class PeerTubeCrawler:
             sources = []
             for file in files:
                 sources.append(self.VideoSourceModel(
+                    extern_id=md5sum(file['fileUrl']),
                     width = file['resolution']['id'],
                     height = None,
                     fps = file['fps'],
@@ -142,6 +144,7 @@ class PeerTubeCrawler:
             results = await s.get_json(url, **self.auth)
 
         channel = self.ChannelModel(
+            extern_id=md5sum(channel_name),
             name=channel_name,
             title=results['displayName'],
             url=results['url'],

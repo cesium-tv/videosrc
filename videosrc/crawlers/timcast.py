@@ -5,7 +5,6 @@ import asyncio
 import logging
 
 from urllib.parse import urljoin, urlparse
-from hashlib import md5
 from datetime import datetime
 from pprint import pprint
 
@@ -16,7 +15,7 @@ from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
 from videosrc.models import Channel, Video, VideoSource
-from videosrc.utils import get_tag_text
+from videosrc.utils import get_tag_text, md5sum
 from videosrc.crawlers.rumble import get_embed_details, parse_date
 
 
@@ -142,6 +141,7 @@ class TimcastCrawler:
             video_details = await get_embed_details(embed_url)
             sources = [
                 self.VideoSourceModel(
+                    extern_id=md5sum(src['url']),
                     width=src['meta']['w'],
                     height=src['meta']['h'],
                     size=src['meta']['size'],
@@ -150,7 +150,7 @@ class TimcastCrawler:
                 ) for src in video_details['ua']['mp4'].values()
             ]
             yield self.VideoModel(
-                extern_id=md5(video_page_url.encode()).hexdigest(),
+                extern_id=md5sum(video_page_url),
                 title=description,
                 poster=thumbnail,
                 duration=video_details['duration'],
@@ -181,6 +181,7 @@ class TimcastCrawler:
                 await s.get_html(url, **self.auth), 'html.parser')
             title = get_tag_text(page, 'h1')
             channel = self.ChannelModel(
+                extern_id=md5sum(url),
                 url=url,
                 name=title,
             )

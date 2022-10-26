@@ -23,8 +23,14 @@ def detect_crawler(url):
     return crawlers
 
 
-async def crawl(url, credentials=None):
-    crawler = detect_crawler(url)[0]()
+async def crawl(url, state=None, credentials=None):
+    crawler = detect_crawler(url)[0](state=state)
     if credentials:
         await crawler.login(url, **credentials)
     return await crawler.crawl(url)
+
+
+def crawl_sync(*args, **kwargs):
+    loop = asyncio.get_event_loop()
+    channel, videos = loop.run_until_complete(crawl(*args, **kwargs))
+    return channel, iter_sync(videos, loop=loop)

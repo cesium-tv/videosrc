@@ -11,10 +11,19 @@ from io import BytesIO
 from urllib.parse import urljoin, quote, urlparse
 from base64 import b64encode
 from os.path import splitext, basename
+from hashlib import md5
 
 import av
 import requests
 from bs4 import BeautifulSoup
+
+
+def md5sum(s):
+    try:
+        s = s.encode()
+    except UnicodeEncodeError:
+        pass
+    return md5(s).hexdigest()
 
 
 def get_tag_text(o, name):
@@ -74,9 +83,9 @@ def url2title(url):
     return ' '.join(words).title()
 
 
-def iter_sync(f):
+def iter_sync(f, loop=None):
     # NOTE: This code converts from async generator to sync generator.
-    loop = asyncio.get_event_loop()
+    loop = loop or asyncio.get_event_loop()
     ait = f.__aiter__()
 
     async def get_next():

@@ -1,9 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 
 @dataclass
 class Channel:
+    extern_id: str
     name: str
     url: str
     title: str = None
@@ -13,6 +14,7 @@ class Channel:
 
 @dataclass
 class VideoSource:
+    extern_id: str
     original: dict
     width: int
     height: int
@@ -31,4 +33,4 @@ class Video:
     published: datetime
     sources: list[VideoSource]
     description: str = None
-    tags: list[str] = list
+    tags: list[str] = field(default_factory=list)

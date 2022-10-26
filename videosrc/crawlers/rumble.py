@@ -3,7 +3,6 @@ import json
 
 from os.path import split as pathsplit
 from urllib.parse import urlparse, urljoin
-from hashlib import md5
 from datetime import datetime
 from pprint import pprint
 
@@ -11,6 +10,7 @@ from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
 from videosrc.models import Channel, Video, VideoSource
+from videosrc.utils import md5sum
 
 
 # Used to parse JSON out of a block of javascript.
@@ -71,6 +71,7 @@ class RumbleCrawler:
                 break
             sources = [
                 self.VideoSourceModel(
+                    extern_id=md5sum(src['url']),
                     width=src['meta']['w'],
                     height=src['meta']['h'],
                     size=src['meta']['size'],
@@ -79,7 +80,7 @@ class RumbleCrawler:
                 ) for src in video_details['ua']['mp4'].values()
             ]
             video = self.VideoModel(
-                extern_id=md5(url.encode()).hexdigest(),
+                extern_id=md5sum(url),
                 title=li.article.h3.text,
                 poster=li.article.img['src'],
                 duration=video_details['duration'],
@@ -100,6 +101,7 @@ class RumbleCrawler:
         thumb = page.find('img', class_='listing-header--thumb')
         poster = thumb.src if thumb else None
         channel = self.ChannelModel(
+            extern_id=md5sum(url),
             name=pparts[-1],
             url=url,
             poster=poster,

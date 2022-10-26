@@ -1,7 +1,6 @@
 import logging
 
 from email.utils import parsedate_to_datetime
-from hashlib import md5
 from itertools import chain
 from urllib.parse import urlparse
 
@@ -10,7 +9,7 @@ from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
 from videosrc.models import Channel, Video, VideoSource
-from videosrc.utils import MediaInfo, basic_auth, get_tag_text
+from videosrc.utils import MediaInfo, basic_auth, get_tag_text, md5sum
 
 
 LOGGER = logging.getLogger(__name__)
@@ -54,7 +53,7 @@ class MRSSCrawler:
             content = item.find('media:content')
             url = content['url']
             info = MediaInfo(url)
-            guid = item.guid.text or md5(url.encode()).hexdigest()
+            guid = item.guid.text or md5sum(url)
             title = get_tag_text(item, 'media:title') or \
                     get_tag_text(item, 'title')
             description = get_tag_text(item, 'media:description') or \
@@ -70,6 +69,7 @@ class MRSSCrawler:
                 t.text for t in item.find_all('media:category')
             ])
             source = VideoSource(
+                extern_id=guid,
                 width=info.frame.width,
                 height=info.frame.height,
                 fps=info.stream.guessed_rate,
@@ -125,6 +125,7 @@ class MRSSCrawler:
             soup = BeautifulSoup(await r.text(), 'xml')
             tag = soup.find('channel')
             channel = self.ChannelModel(
+                extern_id=md5sum(url),
                 name=tag.title.text,
                 url=url,
                 description=tag.description.text,
