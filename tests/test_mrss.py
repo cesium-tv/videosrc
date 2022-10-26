@@ -3,7 +3,7 @@ from os.path import join as pathjoin, dirname, basename
 
 from responses_server import ResponsesServer
 
-from videosrc.crawl.mrss import MRSSCrawler
+from videosrc.crawlers.mrss import MRSSCrawler
 
 
 BASE_PATH = dirname(dirname(__file__))

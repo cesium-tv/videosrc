@@ -3,7 +3,7 @@ from unittest import IsolatedAsyncioTestCase
 from responses.registries import OrderedRegistry
 from responses_server import ResponsesServer
 
-from videosrc.crawl.peertube import PeerTubeCrawler
+from videosrc.crawlers.peertube import PeerTubeCrawler
 
 
 RSP0 = {'avatars': [],

@@ -11,7 +11,6 @@ from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
 from videosrc.models import Channel, Video, VideoSource
-from videosrc.utils import sync_iter
 
 
 # Used to parse JSON out of a block of javascript.

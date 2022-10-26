@@ -25,7 +25,7 @@ def get_tag_text(o, name):
 def basic_auth(username, password):
     return {
         'headers': {
-            'Authorization': b64encode(f'{username}:{password}'.encode()),
+            'Authorization': b64encode(f'{username}:{password}'.encode()).decode(),
         },
     }
 
@@ -74,7 +74,7 @@ def url2title(url):
     return ' '.join(words).title()
 
 
-def sync_iter(f):
+def iter_sync(f):
     # NOTE: This code converts from async generator to sync generator.
     loop = asyncio.get_event_loop()
     ait = f.__aiter__()

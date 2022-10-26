@@ -1,14 +1,15 @@
+import asyncio
 import inspect
 
-import videosrc.crawl
-from videosrc.crawl.html import HTMLCrawler
+import videosrc.crawlers
+from videosrc.crawlers.html import HTMLCrawler
+from videosrc.utils import iter_sync
 
 
 def detect_crawler(url):
     crawlers = []
 
-    for attr in dir(videosrc.crawl):
-        cls = getattr(videosrc.crawl, attr)
+    for cls in videosrc.crawlers.__dict__.values():
         if not inspect.isclass(cls):
             continue
         if callable(getattr(cls, 'check_url', None)):
@@ -20,3 +21,10 @@ def detect_crawler(url):
         crawlers.append(HTMLCrawler)
 
     return crawlers
+
+
+async def crawl(url, credentials=None):
+    crawler = detect_crawler(url)[0]()
+    if credentials:
+        await crawler.login(url, **credentials)
+    return await crawler.crawl(url)

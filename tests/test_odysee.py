@@ -3,7 +3,7 @@ from unittest import IsolatedAsyncioTestCase
 from responses.registries import OrderedRegistry
 from responses_server import ResponsesServer
 
-from videosrc.crawl.odysee import OdyseeCrawler
+from videosrc.crawlers.odysee import OdyseeCrawler
 
 
 RSP0 = {'id': 0,

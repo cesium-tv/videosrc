@@ -7,7 +7,7 @@ from http.server import (
     SimpleHTTPRequestHandler as BaseSimpleHTTPRequestHandler
 )
 
-from videosrc.crawl.html import HTMLCrawler, url2title
+from videosrc.crawlers.html import HTMLCrawler, url2title
 
 
 VIDEOS_DIR = pathjoin(dirname(dirname(__file__)), 'videos')

@@ -4,7 +4,7 @@ import logging
 from pprint import pprint
 from optparse import OptionParser
 
-from videosrc import detect_crawler
+from videosrc import crawl
 
 
 LOGGER = logging.getLogger('vidsrc')
@@ -13,13 +13,16 @@ LOGGER.addHandler(logging.StreamHandler())
 
 
 async def main(options, args):
-    url = args[0]
-    crawler = detect_crawler(url)[0]()
+    url, credentials = args[0], {}
 
-    if options.username and options.password:
-        await crawler.login(url, options.username, options.password)
+    if options.username:
+        credentials['username'] = options.username
+        
+    if options.password:
+        credentials['password'] = options.password
 
-    channel, videos = await crawler.crawl(url)
+    channel, videos = await crawl(url, credentials)
+
     pprint(channel)
     async for video, state in videos:
         pprint(video)

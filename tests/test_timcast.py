@@ -3,7 +3,7 @@ from unittest import IsolatedAsyncioTestCase
 from responses.registries import OrderedRegistry
 from responses_server import ResponsesServer
 
-from videosrc.crawl.timcast import TimcastCrawler
+from videosrc.crawlers.timcast import TimcastCrawler
 
 
 RSP0 = '''
