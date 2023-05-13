@@ -4,9 +4,10 @@ from videosrc.crawlers.rumble import RumbleCrawler
 from videosrc.crawlers.html import HTMLCrawler
 from videosrc.crawlers.mrss import MRSSCrawler
 from videosrc.crawlers.odysee import OdyseeCrawler
+from videosrc.crawlers.twitter import TwitterCrawler
 
 
 __all__ = [
     'TimcastCrawler', 'PeerTubeCrawler', 'RumbleCrawler', 'HTMLCrawler',
-    'MRSSCrawler', 'OdyseeCrawler',
+    'MRSSCrawler', 'OdyseeCrawler', 'TwitterCrawler',
 ]

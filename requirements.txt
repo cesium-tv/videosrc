@@ -3,3 +3,5 @@ pyppeteer==1.0.2
 beautifulsoup4==4.10.0
 requests==2.25.1
 av==9.2.0
+snscrape @ git+https://github.com/JustAnotherArchivist/snscrape.git
+Pillow==9.5.0

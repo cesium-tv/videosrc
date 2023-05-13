@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from videosrc.models import Channel, Video, VideoSource
 from videosrc.utils import md5sum
+from videosrc.crawlers.base import Crawler
 
 
 # Used to parse JSON out of a block of javascript.
@@ -45,21 +46,11 @@ def parse_date(s):
     return datetime.strptime(s, '%Y-%m-%dT%H:%M:%S%z')
 
 
-class RumbleCrawler:
-    def __init__(self, state=None, ChannelModel=Channel,
-                 VideoModel=Video, VideoSourceModel=VideoSource):
-        self.state = state
-        self.ChannelModel = ChannelModel
-        self.VideoModel = VideoModel
-        self.VideoSourceModel = VideoSourceModel
-
+class RumbleCrawler(Crawler):
     @staticmethod
     def check_url(url):
         urlp = urlparse(url)
         return urlp.netloc.endswith('rumble.com')
-
-    async def login(self):
-        pass
 
     async def _iter_videos(self, url, page):
         for li in page.find_all('li', class_='video-listing-entry'):
@@ -90,7 +81,7 @@ class RumbleCrawler:
             )
             yield video, published
 
-    async def crawl(self, url):
+    async def crawl(self, url, **options):
         # https://rumble.com/user/vivafrei
         urlp = urlparse(url)
         pparts = pathsplit(urlp.path.strip('/'))

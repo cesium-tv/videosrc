@@ -9,21 +9,17 @@ from aiohttp.hdrs import METH_POST
 from aiohttp_scraper import ScraperSession
 
 from videosrc.models import Channel, Video, VideoSource
+from videosrc.crawlers.base import Crawler
 
 
 API_URL = 'https://api.na-backend.odysee.com/api/v1/proxy'
 
 
-class OdyseeCrawler:
-    def __init__(self, state=None, ChannelModel=Channel, VideoModel=Video,
-                 VideoSourceModel=VideoSource, api_url=API_URL):
-        self.auth = None
-        self.state = state
-        self.ChannelModel = ChannelModel
-        self.VideoModel = VideoModel
-        self.VideoSourceModel = VideoSourceModel
+class OdyseeCrawler(Crawler):
+    def __init__(self, state=0, api_url=API_URL, **kwargs):
+        super().__init__(state=state, **kwargs)
         self.api_url = api_url
-        self.auth_token = None
+        self.auth = None
 
     @staticmethod
     def check_url(url):
@@ -220,13 +216,20 @@ class OdyseeCrawler:
                     sources=[source],
                     original=item,
                 )
-                yield video, self.state
+
+                try:
+                    yield video
+                except Exception as e:
+                    LOGGER.exception(e)
+
+                self.on_state(published)
+
             if len(items) + 1 < int(result['page_size']):
                 break
             break
             page_number += 1
 
-    async def crawl(self, url, options=None):
+    async def crawl(self, url, **options):
         # https://odysee.com/@timcast:c
         state, self.state = self.state, int(time.time())
         urlp = urlparse(url)

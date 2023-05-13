@@ -10,23 +10,14 @@ from bs4 import BeautifulSoup
 
 from videosrc.models import Channel, Video, VideoSource
 from videosrc.utils import MediaInfo, basic_auth, get_tag_text, md5sum
+from videosrc.crawlers.html import HTMLCrawler
 
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
 
-class MRSSCrawler:
-    def __init__(self, state=None, ChannelModel=Channel, VideoModel=Video,
-                 VideoSourceModel=VideoSource):
-        self.state = state
-        self.ChannelModel = ChannelModel
-        self.VideoModel = VideoModel
-        self.VideoSourceModel = VideoSourceModel
-
-    async def login(self, username, password):
-        self.auth = basic_auth(username, password)
-
+class MRSSCrawler(HTMLCrawler):
     @staticmethod
     def check_url(url):
         urlp = urlparse(url)
@@ -92,7 +83,13 @@ class MRSSCrawler:
                     'tag': str(item),
                 },
             )
-            yield video, self.state
+
+            try:
+                yield video
+            except Exception as e:
+                LOGGER.exception(e)
+
+        self.on_state(self.state)
 
 # <channel>
 #     <title>Calm Meditation</title>
@@ -110,7 +107,7 @@ class MRSSCrawler:
 #         <height>114</height>
 #         <width>114</width>
 #     </image>
-    async def crawl(self, url, options=None):
+    async def crawl(self, url, **options):
         async with ScraperSession() as s:
             r = await s._request(METH_GET, url)
             try:
@@ -121,7 +118,7 @@ class MRSSCrawler:
                 }
             except KeyError as e:
                 LOGGER.warning(
-                    'Could not read header: %s, cannot save state', e.args[0])
+                    'Could not read header: %s, cannot create state', e.args[0])
             soup = BeautifulSoup(await r.text(), 'xml')
             tag = soup.find('channel')
             channel = self.ChannelModel(

@@ -1,9 +1,9 @@
-from unittest import IsolatedAsyncioTestCase
+from unittest import TestCase, IsolatedAsyncioTestCase
 
 from responses.registries import OrderedRegistry
 from responses_server import ResponsesServer
 
-from videosrc.crawlers.peertube import PeerTubeCrawler
+from videosrc.crawlers.peertube import PeerTubeCrawler, maybe_parse_date
 
 
 RSP0 = {'avatars': [],
@@ -396,6 +396,18 @@ RSP3 = {'account': {'avatars': [],
  'waitTranscoding': True}
 
 
+
+class PeerTubeDateParseTestCase(TestCase):
+    def test_parse(self):
+        dt = maybe_parse_date('2022-07-31T00:54:44.991Z')
+        self.assertEqual(dt.year, 2022)
+        self.assertEqual(dt.month, 7)
+        self.assertEqual(dt.day, 31)
+        self.assertEqual(dt.hour, 0)
+        self.assertEqual(dt.minute, 54)
+        self.assertEqual(dt.second, 44)
+
+
 class PeerTubeTestCase(IsolatedAsyncioTestCase):
     def setUp(self):
         self.server = ResponsesServer(
@@ -403,15 +415,19 @@ class PeerTubeTestCase(IsolatedAsyncioTestCase):
         self.server.start()
         self.crawler = PeerTubeCrawler()
         self.server.get(
-            self.server.url('/api/v1/video-channels/btimby_channel@cesium.tv:80'),
+            self.server.url(
+                '/api/v1/video-channels/btimby_channel@cesium.tv:80'),
             json=RSP0)
         self.server.get(
-            self.server.url('/api/v1/video-channels/btimby_channel@cesium.tv:80/videos'),
+            self.server.url(
+                '/api/v1/video-channels/btimby_channel@cesium.tv:80/videos'),
             json=RSP1)
         self.server.get(
-            self.server.url('/api/v1/videos/iNid2sMo2cZQrJBnipxiXs'), json=RSP2)
+            self.server.url(
+                '/api/v1/videos/iNid2sMo2cZQrJBnipxiXs'), json=RSP2)
         self.server.get(
-            self.server.url('/api/v1/videos/cqiZm4MvzSkrFhb5THHRgU'), json=RSP3)
+            self.server.url(
+                '/api/v1/videos/cqiZm4MvzSkrFhb5THHRgU'), json=RSP3)
 
     def tearDown(self):
         self.server.stop()
@@ -420,7 +436,8 @@ class PeerTubeTestCase(IsolatedAsyncioTestCase):
         pass #  await self.crawler.login()
 
     async def test_peertube(self):
-        channel, videos = await self.crawler.crawl(self.server.url('/c/btimby_channel@cesium.tv:80'))
+        channel, videos = await self.crawler.crawl(
+            self.server.url('/c/btimby_channel@cesium.tv:80'))
         videos = [v async for v, s in videos]
         self.assertEqual('btimby_channel@cesium.tv:80', channel.name)
         self.assertEqual(2, len(videos))

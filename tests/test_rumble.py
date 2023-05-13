@@ -378,7 +378,8 @@ class RumbleTestCase(IsolatedAsyncioTestCase):
         self.server.stop()
 
     async def test_login(self):
-        await self.crawler.login()
+         with self.assertRaises(NotImplementedError):
+            await self.crawler.login()
 
     async def test_crawl(self):
         channel, videos = await self.crawler.crawl(

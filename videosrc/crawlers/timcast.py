@@ -17,6 +17,8 @@ from bs4 import BeautifulSoup
 from videosrc.models import Channel, Video, VideoSource
 from videosrc.utils import get_tag_text, md5sum
 from videosrc.crawlers.rumble import get_embed_details, parse_date
+from videosrc.crawlers.base import Crawler
+from videosrc.errors import MissingOption
 
 
 LOGGER = logging.getLogger(__name__)
@@ -47,14 +49,10 @@ def _no_images(request):
         request.continue_()
 
 
-class TimcastCrawler:
-    def __init__(self,  state=None, ChannelModel=Channel,
-                 VideoModel=Video, VideoSourceModel=VideoSource):
+class TimcastCrawler(Crawler):
+    def __init__(self,  **kwargs):
+        super().__init__(**kwargs)
         self.auth = {}
-        self.state = state
-        self.ChannelModel = ChannelModel
-        self.VideoModel = VideoModel
-        self.VideoSourceModel = VideoSourceModel
 
     @staticmethod
     def check_url(url):
@@ -99,15 +97,19 @@ class TimcastCrawler:
             await page.close()
             await browser.close()
 
-    async def login(self, url, username, password, headless=True, retry=3, timeout=2000):
+    async def login(self, **kwargs):
+        try:
+            url = kwargs['url']
+        except KeyError as e:
+            raise MissingOption(e.args[0])
+
+        retry = kwargs.pop('retry', 3)
         url = urljoin(url, '/login/')
 
         for i in range(1, 1 + retry):
             try:
                 LOGGER.debug('Login attempt %i', i)
-                self.auth = await self._login(
-                    url, username, password, headless=headless, timeout=timeout
-                )
+                self.auth = await self._login(url, **kwargs)
                 break
 
             except (PyppeteerError, asyncio.TimeoutError):
@@ -175,7 +177,7 @@ class TimcastCrawler:
                 page = BeautifulSoup(
                     await s.get_html(page_url, **self.auth), 'html.parser')
 
-    async def crawl(self, url, options=None):
+    async def crawl(self, url, **options):
         async with ScraperSession() as s:
             page = BeautifulSoup(
                 await s.get_html(url, **self.auth), 'html.parser')

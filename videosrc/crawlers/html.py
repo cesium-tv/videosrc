@@ -8,22 +8,19 @@ from aiohttp.hdrs import METH_GET
 from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
-from videosrc.models import Channel, Video, VideoSource
 from videosrc.utils import dict_repr, url2title, MediaInfo, basic_auth, md5sum
+from videosrc.errors import AuthenticationError
+from videosrc.crawlers.base import Crawler
 
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
 
-class HTMLCrawler:
-    def __init__(self, state=None, ChannelModel=Channel, VideoModel=Video,
-                 VideoSourceModel=VideoSource):
+class HTMLCrawler(Crawler):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.auth = {}
-        self.state = state
-        self.ChannelModel = ChannelModel
-        self.VideoModel = VideoModel
-        self.VideoSourceModel = VideoSourceModel
 
     @staticmethod
     def check_url(url):
@@ -31,7 +28,7 @@ class HTMLCrawler:
         # chosen as a default if no other crawler claims a url.
         return False
 
-    async def login(self, username, password):
+    async def login(self, username=None, password=None):
         self.auth = basic_auth(username, password)
 
     async def _iter_videos(self, url, soup):
@@ -65,9 +62,16 @@ class HTMLCrawler:
                     'headers': dict(info.headers),
                 },
             )
-            yield video, self.state
 
-    async def crawl(self, url, options=None):
+            try:
+                yield video
+
+            except Exception as e:
+                LOGGER.exception(e)
+
+        self.on_state(self.state)
+
+    async def crawl(self, url, **options):
         async with ScraperSession() as s:
             r = await s._request(METH_GET, url, **self.auth)
             try:
@@ -78,7 +82,7 @@ class HTMLCrawler:
                 }
             except KeyError as e:
                 LOGGER.warning(
-                    'Could not read header: %s, cannot save state', e.args[0])
+                    'Could not read header: %s, cannot create state', e.args[0])
             soup = BeautifulSoup(await r.text(), 'html.parser')
             title = soup.find('title').text
             channel = self.ChannelModel(

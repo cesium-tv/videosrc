@@ -10,21 +10,23 @@ from aiohttp_scraper import ScraperSession
 
 from videosrc.models import Channel, Video, VideoSource
 from videosrc.utils import md5sum
+from videosrc.crawlers.base import Crawler
 
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
 # '2022-07-31T01:16:56.624Z'
-DATETIME_FMT = '%Y-%m-%dT%H:%M:%S%z'
+# '2022-07-31T00:54:44.991Z'
+DATETIME_FMT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
 
-def maybe_parse_date(date_str):
-    if date_str is None:
+def maybe_parse_date(s):
+    if s is None:
         return None
 
     try:
-        return datetime.strptime(date_str, DATETIME_FMT)
+        return datetime.strptime(s, DATETIME_FMT)
 
     except ValueError:
         LOGGER.exception('Error parsing datetime')
@@ -43,14 +45,10 @@ def parse_channel_name(url):
         return urlp, channel_name
 
 
-class PeerTubeCrawler:
-    def __init__(self, state=None, ChannelModel=Channel, VideoModel=Video,
-                 VideoSourceModel=VideoSource):
+class PeerTubeCrawler(Crawler):
+    def __init__(self, state=0, **kwargs):
+        super().__init__(state=state, **kwargs)
         self.auth = {}
-        self.state = state or 0
-        self.ChannelModel = ChannelModel
-        self.VideoModel = VideoModel
-        self.VideoSourceModel = VideoSourceModel
 
     @staticmethod
     def check_url(url):
@@ -62,13 +60,15 @@ class PeerTubeCrawler:
 
     async def _iter_videos(self, url):
         url += '/videos'
+        params = {
+            'count': 25,
+            'sort': '-publishedAt',
+            'skipCount': 'true',
+        }
+        if self.state:
+            params['start'] = self.state
         async with ScraperSession() as s:
-            results = await s.get_json(url, params={
-                'start': self.state,
-                'count': 25,
-                'sort': '-publishedAt',
-                'skipCount': 'true',
-            }, **self.auth)
+            results = await s.get_json(url, params=params, **self.auth)
 
         urlp = urlparse(url)
         for result in results['data']:
@@ -127,7 +127,7 @@ class PeerTubeCrawler:
             }
         }
 
-    async def crawl(self, url, options=None):
+    async def crawl(self, url, **options):
         urlp, channel_name = parse_channel_name(url)
 
         # NOTE: We are assuming the channel name is local to the instance
