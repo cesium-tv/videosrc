@@ -131,7 +131,7 @@ class MRSSCrawler(HTMLCrawler):
 #     </image>
     async def crawl(self, url, **options):
         async with ScraperSession() as s:
-            r = await s._request(METH_GET, url)
+            r = await s._request(METH_GET, url, proxy=self._proxy)
             try:
                 state = {
                     'Last-Modified': parsedate_to_datetime(

@@ -1,3 +1,4 @@
+import os
 import logging
 
 from abc import ABC
@@ -8,15 +9,19 @@ from videosrc.errors import InvalidOptionError
 from videosrc.utils import aenumerate
 
 
+VIDEOSRC_PROXY = os.getenv('VIDEOSRC_PROXY', None)
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
 
 class Crawler(ABC):
-    def __init__(self, state=None, save_state=None, ChannelModel=Channel,
-                 VideoModel=Video, VideoSourceModel=VideoSource):
+    def __init__(self, state=None, save_state=None, proxy=VIDEOSRC_PROXY,
+                 ChannelModel=Channel, VideoModel=Video,
+                 VideoSourceModel=VideoSource):
         self._state = state
         self._save_state = save_state
+        self._proxy = proxy
         self.ChannelModel = ChannelModel
         self.VideoModel = VideoModel
         self.VideoSourceModel = VideoSourceModel

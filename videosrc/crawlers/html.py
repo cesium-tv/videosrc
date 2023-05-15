@@ -70,7 +70,7 @@ class HTMLCrawler(Crawler):
 
     async def crawl(self, url, **kwargs):
         async with ScraperSession() as s:
-            r = await s._request(METH_GET, url, **self.auth)
+            r = await s._request(METH_GET, url, proxy=self._proxy, **self.auth)
             try:
                 state = {
                     'Last-Modified': parsedate_to_datetime(

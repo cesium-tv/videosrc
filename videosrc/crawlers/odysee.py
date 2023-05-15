@@ -35,6 +35,7 @@ class OdyseeCrawler(Crawler):
             r = await s.request(
                 METH_POST,
                 self.api_url,
+                proxy=self._proxy,
                 params={'m': method},
                 json={
                     "jsonrpc": "2.0",
@@ -50,6 +51,7 @@ class OdyseeCrawler(Crawler):
             r = await s._request(
                 METH_POST,
                 'https://api.odysee.com/user/new',
+                proxy=self._proxy,
                 data={
                     'auth_token': '',
                     'language': 'en',

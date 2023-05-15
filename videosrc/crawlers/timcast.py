@@ -56,13 +56,16 @@ class TimcastCrawler(Crawler):
 
     async def _login(self, url, username, password, headless=True,
                      timeout=2000):
+        args = [
+            '--start-maximized',
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+        ]
+        if self._proxy:
+            args.append(f'--proxy-server={self._proxy}')
         browser = await pyppeteer.launch(
             headless=headless,
-            args=[
-                '--start-maximized',
-                '--no-sandbox',
-                '--disable-setuid-sandbox'
-            ],
+            args=args,
             ignoreHTTPSError=True,
             handleSIGINT=False,
             handleSIGTERM=False,
@@ -126,11 +129,13 @@ class TimcastCrawler(Crawler):
             video_page_url = urljoin(url, urlparse(video_page_url).path)
             async with ScraperSession() as s:
                 video_page = BeautifulSoup(
-                    await s.get_html(video_page_url, **self.auth),
+                    await s.get_html(video_page_url, proxy=self._proxy,
+                                     **self.auth),
                     'html.parser')
             iframe_tag = video_page.find('iframe')
             embed_url = iframe_tag['src']
-            video_details = await get_embed_details(embed_url)
+            video_details = await get_embed_details(
+                embed_url, proxy=self._proxy)
             pubDate = parse_date(video_details['pubDate'])
 
             if self._state and pubDate < self._state:
@@ -180,13 +185,15 @@ class TimcastCrawler(Crawler):
                 if not page.find('a', href=urlp.path[:-1]):
                     LOGGER.debug('No more pages')
                     break
-                page = BeautifulSoup(
-                    await s.get_html(page_url, **self.auth), 'html.parser')
+                html = await s.get_html(
+                    page_url, proxy=self._proxy, **self.auth)
+                page = BeautifulSoup(html, 'html.parser')
 
     async def crawl(self, url, **kwargs):
         async with ScraperSession() as s:
             page = BeautifulSoup(
-                await s.get_html(url, **self.auth), 'html.parser')
+                await s.get_html(
+                    url, proxy=self._proxy, **self.auth), 'html.parser')
             title = get_tag_text(page, 'h1')
             channel = self.ChannelModel(
                 extern_id=md5sum(url),

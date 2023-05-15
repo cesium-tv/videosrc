@@ -65,7 +65,9 @@ class PeerTubeCrawler(Crawler):
         if self._state:
             params['start'] = self._state
         async with ScraperSession() as s:
-            results = await s.get_json(url, params=params, **self.auth)
+            results = await s.get_json(
+                url, params=params, proxy=self._proxy, **self.auth
+            )
 
         urlp = urlparse(url)
         for result in results['data']:
@@ -74,7 +76,7 @@ class PeerTubeCrawler(Crawler):
                 urlp.netloc,
                 f"/api/v1/videos/{result['shortUUID']}", '', '', ''))
             async with ScraperSession() as s:
-                obj = await s.get_json(url, **self.auth)
+                obj = await s.get_json(url, proxy=self._proxy, **self.auth)
             files = obj.pop('files')
 
             sources = []
@@ -114,16 +116,22 @@ class PeerTubeCrawler(Crawler):
 
     async def login(self, url, username, password):
         async with ScraperSession() as s:
-            r = await s.get_json(urljoin(url, '/api/v1/oauth-clients/local/'))
+            r = await s.get_json(
+                urljoin(url, '/api/v1/oauth-clients/local/'),
+                proxy=self._proxy)
             params = r.json()
-            r = await s._request(METH_POST, urljoin(url,
-                                 '/api/v1/users/token/'), data={
-                'client_id': params['client_id'],
-                'client_secret': params['client_secret'],
-                'grant_type': 'password',
-                'username': username,
-                'password': password,
-            })
+            r = await s._request(
+                METH_POST,
+                urljoin(url, '/api/v1/users/token/'),
+                proxy=self._proxy,
+                data={
+                    'client_id': params['client_id'],
+                    'client_secret': params['client_secret'],
+                    'grant_type': 'password',
+                    'username': username,
+                    'password': password,
+                },
+            )
             token = await r.json()
         self.auth = {
             'headers': {
@@ -145,7 +153,7 @@ class PeerTubeCrawler(Crawler):
             f'api/v1/video-channels/{channel_name}', '', '', ''))
 
         async with ScraperSession() as s:
-            results = await s.get_json(url, **self.auth)
+            results = await s.get_json(url, proxy=self._proxy, **self.auth)
 
         channel = self.ChannelModel(
             extern_id=md5sum(channel_name),

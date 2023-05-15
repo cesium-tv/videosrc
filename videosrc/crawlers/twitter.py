@@ -78,9 +78,18 @@ class TwitterCrawler(Crawler):
     async def crawl(self, url, **kwargs):
         # Parse name from URL
         name = urlparse(url).path.strip('/')
+        proxies = {}
+        if self._proxy:
+            proxies['http'] = self._proxy
+            proxies['https'] = self._proxy
+
         # Get the tweets:
         try:
-            items = sntwitter.TwitterUserScraper(name).get_items()
+            items = sntwitter.TwitterUserScraper(
+                name,
+                proxies=proxies,
+            ).get_items()
+
         except ScraperException as e:
             LOGGER.error(e.args[0])
             raise InvalidOptionError('Unknown twitter user %s' % name)

@@ -22,9 +22,9 @@ HTML_ERASE = re.compile(r'<.*>')  # Removes HTML / CSS.
 FUNC_ERASE = re.compile(r',loaded:\w\(\)')  # Removes an function reference.
 
 
-async def get_embed_details(embed_url):
+async def get_embed_details(embed_url, proxy=None):
     async with ScraperSession() as s:
-        embed_page = await s.get_html(embed_url)
+        embed_page = await s.get_html(embed_url, proxy=proxy)
         m = JSON_EXTRACT.search(embed_page)
         if not m:
             raise Exception('Could not extract data from javascript')
@@ -34,13 +34,14 @@ async def get_embed_details(embed_url):
         return json.loads(data)
 
 
-async def get_video_details(url):
+async def get_video_details(url, proxy=None):
     async with ScraperSession() as s:
-        video_page = BeautifulSoup(await s.get_html(url), 'html.parser')
+        video_page = BeautifulSoup(
+            await s.get_html(url, proxy=proxy), 'html.parser')
         script_tag = video_page.find('script', type='application/ld+json')
         video_details = json.loads(script_tag.text)
         embed_url = video_details[0]['embedUrl']
-        return await get_embed_details(embed_url)
+        return await get_embed_details(embed_url, proxy=proxy)
 
 
 def parse_date(s):
@@ -57,7 +58,7 @@ class RumbleCrawler(Crawler):
     async def _iter_videos(self, url, page):
         for li in page.find_all('li', class_='video-listing-entry'):
             url = urljoin(url, li.article.a['href'])
-            video_details = await get_video_details(url)
+            video_details = await get_video_details(url, proxy=self._proxy)
             published = parse_date(video_details['pubDate'])
             if self._state and self._state > published:
                 LOGGER.info('Video published before given state')
@@ -98,7 +99,8 @@ class RumbleCrawler(Crawler):
         pparts = pathsplit(urlp.path.strip('/'))
 
         async with ScraperSession() as s:
-            page = BeautifulSoup(await s.get_html(url), 'html.parser')
+            html = await s.get_html(url, proxy=self._proxy)
+            page = BeautifulSoup(html, 'html.parser')
 
         thumb = page.find('img', class_='listing-header--thumb')
         poster = thumb.src if thumb else None
