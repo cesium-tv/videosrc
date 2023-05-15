@@ -1,24 +1,19 @@
 import re
 import time
-import json
 import asyncio
 import logging
 
 from urllib.parse import urljoin, urlparse
-from datetime import datetime
-from pprint import pprint
 
 import pyppeteer
 from pyppeteer.errors import PyppeteerError
-from aiohttp.hdrs import METH_HEAD
 from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
-from videosrc.models import Channel, Video, VideoSource
-from videosrc.utils import get_tag_text, md5sum
+from videosrc.utils import get_tag_text, md5sum, url2mime
 from videosrc.crawlers.rumble import get_embed_details, parse_date
 from videosrc.crawlers.base import Crawler
-from videosrc.errors import MissingOption
+from videosrc.errors import MissingOptionError
 
 
 LOGGER = logging.getLogger(__name__)
@@ -59,7 +54,8 @@ class TimcastCrawler(Crawler):
         urlp = urlparse(url)
         return urlp.netloc.endswith('timcast.com')
 
-    async def _login(self, url, username, password, headless=True, timeout=2000):
+    async def _login(self, url, username, password, headless=True,
+                     timeout=2000):
         browser = await pyppeteer.launch(
             headless=headless,
             args=[
@@ -76,7 +72,7 @@ class TimcastCrawler(Crawler):
         page = await browser.newPage()
 
         try:
-            await page.setViewport({ 'width': 1366, 'height': 768 })
+            await page.setViewport({'width': 1366, 'height': 768})
 
             LOGGER.debug('Opening url: %s', url)
             await page.goto(url, timeout=timeout, waitFor='networkidle2')
@@ -101,7 +97,7 @@ class TimcastCrawler(Crawler):
         try:
             url = kwargs['url']
         except KeyError as e:
-            raise MissingOption(e.args[0])
+            raise MissingOptionError(e.args[0])
 
         retry = kwargs.pop('retry', 3)
         url = urljoin(url, '/login/')
@@ -120,15 +116,9 @@ class TimcastCrawler(Crawler):
                 time.sleep(3 ** i)
 
     async def _iter_videos(self, url, page):
-        grid = page.find('div', class_='t-grid:s:fit:2 t-grid:m:fit:4 t-pad:25pc:top')
+        grid = page.find(
+            'div', class_='t-grid:s:fit:2 t-grid:m:fit:4 t-pad:25pc:top')
         for article in grid.find_all('div', class_='article'):
-            date = article.find('div', class_='summary').div.text
-            (m, d, y) = map(int, date.split('.'))
-            state = datetime(y + 2000, m, d)
-            if self.state and self.state > state:
-                LOGGER.info('Video published before given state')
-                break
-
             video_link = article.find('a', class_='image')
             thumbnail = video_link.img['src']
             description = video_link.img['alt']
@@ -141,25 +131,41 @@ class TimcastCrawler(Crawler):
             iframe_tag = video_page.find('iframe')
             embed_url = iframe_tag['src']
             video_details = await get_embed_details(embed_url)
+            pubDate = parse_date(video_details['pubDate'])
+
+            if self._state and pubDate < self._state:
+                LOGGER.info('Video published before last state %s', pubDate)
+                return
+
             sources = [
                 self.VideoSourceModel(
                     extern_id=md5sum(src['url']),
                     width=src['meta']['w'],
                     height=src['meta']['h'],
                     size=src['meta']['size'],
+                    mime=url2mime(src['url']),
                     url=src['url'],
                     original=src,
                 ) for src in video_details['ua']['mp4'].values()
             ]
-            yield self.VideoModel(
+            video = self.VideoModel(
                 extern_id=md5sum(video_page_url),
                 title=description,
                 poster=thumbnail,
                 duration=video_details['duration'],
-                published=parse_date(video_details['pubDate']),
+                published=pubDate,
                 original=str(article),
                 sources=sources,
-            ), state
+            )
+
+            try:
+                yield video
+
+            except Exception as e:
+                LOGGER.exception(e)
+
+            else:
+                self._state = pubDate
 
     async def _iter_pages(self, url, page):
         page_num = 1
@@ -177,7 +183,7 @@ class TimcastCrawler(Crawler):
                 page = BeautifulSoup(
                     await s.get_html(page_url, **self.auth), 'html.parser')
 
-    async def crawl(self, url, **options):
+    async def crawl(self, url, **kwargs):
         async with ScraperSession() as s:
             page = BeautifulSoup(
                 await s.get_html(url, **self.auth), 'html.parser')
@@ -188,4 +194,4 @@ class TimcastCrawler(Crawler):
                 name=title,
             )
 
-        return channel, self._iter_pages(url, page)
+        return channel, self._iter_pages(url, page, **kwargs)

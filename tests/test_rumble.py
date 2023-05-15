@@ -384,7 +384,7 @@ class RumbleTestCase(IsolatedAsyncioTestCase):
     async def test_crawl(self):
         channel, videos = await self.crawler.crawl(
             self.server.url('/user/vivafrei/'))
-        videos = [v async for v, s in videos]
+        videos = [v async for v in videos]
         self.assertEqual('vivafrei', channel.name)
         self.assertEqual(1, len(videos))
         self.assertEqual(4, len(videos[0].sources))

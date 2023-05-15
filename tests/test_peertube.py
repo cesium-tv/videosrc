@@ -438,7 +438,7 @@ class PeerTubeTestCase(IsolatedAsyncioTestCase):
     async def test_peertube(self):
         channel, videos = await self.crawler.crawl(
             self.server.url('/c/btimby_channel@cesium.tv:80'))
-        videos = [v async for v, s in videos]
+        videos = [v async for v in videos]
         self.assertEqual('btimby_channel@cesium.tv:80', channel.name)
         self.assertEqual(2, len(videos))
         self.assertEqual('ElephantsDream',videos[0].title)

@@ -1,7 +1,6 @@
 import logging
 
 from urllib.parse import urljoin
-from hashlib import md5
 from email.utils import parsedate_to_datetime
 
 from aiohttp.hdrs import METH_GET
@@ -9,7 +8,6 @@ from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
 from videosrc.utils import dict_repr, url2title, MediaInfo, basic_auth, md5sum
-from videosrc.errors import AuthenticationError
 from videosrc.crawlers.base import Crawler
 
 
@@ -35,33 +33,34 @@ class HTMLCrawler(Crawler):
         for a in soup.find_all('a'):
             # NOTE: Link might be absolute.
             href = urljoin(url, a['href'])
-            info = MediaInfo(href)
             guid = md5sum(href)
-            source = self.VideoSourceModel(
-                extern_id=guid,
-                width=info.frame.width,
-                height=info.frame.height,
-                fps=info.stream.guessed_rate,
-                size=info.size,
-                url=href,
-                original={
-                    'url': href,
-                    'video': dict_repr(info.video),
-                },
-            )
-            video = self.VideoModel(
-                extern_id=guid,
-                title=url2title(href),
-                poster=info.poster(),
-                duration=info.stream.duration,
-                published=info.last_modified(),
-                sources=[source],
-                original={
-                    'url': href,
-                    'tag': str(a),
-                    'headers': dict(info.headers),
-                },
-            )
+            with MediaInfo(href) as info:
+                source = self.VideoSourceModel(
+                    extern_id=guid,
+                    width=info.width,
+                    height=info.height,
+                    fps=info.fps,
+                    size=info.size,
+                    url=href,
+                    mime=info.mime,
+                    original={
+                        'url': href,
+                        'video': dict_repr(info.video),
+                    },
+                )
+                video = self.VideoModel(
+                    extern_id=guid,
+                    title=url2title(href),
+                    poster=info.poster(),
+                    duration=info.duration,
+                    published=info.last_modified(),
+                    sources=[source],
+                    original={
+                        'url': href,
+                        'tag': str(a),
+                        'headers': dict(info.headers),
+                    },
+                )
 
             try:
                 yield video
@@ -69,20 +68,26 @@ class HTMLCrawler(Crawler):
             except Exception as e:
                 LOGGER.exception(e)
 
-        self.on_state(self.state)
-
-    async def crawl(self, url, **options):
+    async def crawl(self, url, **kwargs):
         async with ScraperSession() as s:
             r = await s._request(METH_GET, url, **self.auth)
             try:
-                self.state = {
+                state = {
                     'Last-Modified': parsedate_to_datetime(
                         r.headers['Last-Modified']),
                     'Content-Length': int(r.headers['Content-Length']),
                 }
             except KeyError as e:
                 LOGGER.warning(
-                    'Could not read header: %s, cannot create state', e.args[0])
+                    'Could not read header: %s, unknown state', e.args[0])
+
+            else:
+                if self._state == state:
+                    LOGGER.info('Matching state, no updates')
+                    return
+                else:
+                    self._state = state
+
             soup = BeautifulSoup(await r.text(), 'html.parser')
             title = soup.find('title').text
             channel = self.ChannelModel(
@@ -90,4 +95,4 @@ class HTMLCrawler(Crawler):
                 name=title,
                 url=url,
             )
-            return channel, self._iter_videos(url, soup)
+            return channel, self.iter_videos(url, soup, **kwargs)

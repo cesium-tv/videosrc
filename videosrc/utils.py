@@ -1,6 +1,7 @@
 import re
 import types
 import asyncio
+import logging
 
 from base64 import b64encode
 from numbers import Number
@@ -8,14 +9,17 @@ from fractions import Fraction
 from datetime import datetime
 from email.utils import parsedate_to_datetime
 from io import BytesIO
-from urllib.parse import urljoin, quote, urlparse
-from base64 import b64encode
+from urllib.parse import quote, urlparse
 from os.path import splitext, basename
 from hashlib import md5
+from mimetypes import guess_type
 
 import av
 import requests
-from bs4 import BeautifulSoup
+
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.addHandler(logging.NullHandler())
 
 
 def md5sum(s):
@@ -32,9 +36,10 @@ def get_tag_text(o, name):
 
 
 def basic_auth(username, password):
+    auth = f'{username}:{password}'.encode()
     return {
         'headers': {
-            'Authorization': b64encode(f'{username}:{password}'.encode()).decode(),
+            'Authorization': b64encode(auth).decode(),
         },
     }
 
@@ -74,13 +79,17 @@ def url2title(url):
     urlp = urlparse(url)
     fn = splitext(basename(urlp.path))[0]
     wupper = [
-        s for s in [s.strip() for s in re.split('(?=[A-Z])', fn)] if s
+        s for s in [s.strip() for s in re.split(r'(?=[A-Z])', fn)] if s
     ]
     wnword = [
-        s for s in [s.strip() for s in re.split('[\s\-_=+]+', fn)] if s
+        s for s in [s.strip() for s in re.split(r'[\s\-_=+]+', fn)] if s
     ]
     words = wupper if len(wupper) > len(wnword) else wnword
     return ' '.join(words).title()
+
+
+def url2mime(url):
+    return guess_type(urlparse(url).path)[0]
 
 
 def iter_sync(f, loop=None):
@@ -104,6 +113,13 @@ def iter_sync(f, loop=None):
         yield obj
 
 
+async def aenumerate(seq, start=0):
+    n = start
+    async for e in seq:
+        yield n, e
+        n += 1
+
+
 class MediaInfo:
     """
     Decodes remote video file.
@@ -115,6 +131,12 @@ class MediaInfo:
         self._video = None
         self._frame = None
         self._headers = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     @property
     def headers(self):
@@ -134,7 +156,11 @@ class MediaInfo:
 
     @property
     def stream(self):
-        return self.video.streams.video[0]
+        try:
+            return self.video.streams.video[0]
+        except IndexError as e:
+            LOGGER.warning(e, exc_info=True)
+            return None
 
     @property
     def frame(self):
@@ -148,12 +174,44 @@ class MediaInfo:
     def size(self):
         return int(self.headers.get('Content-Length', 0))
 
+    @property
+    def mime(self):
+        return self.headers.get('Content-Type')
+
+    @property
+    def width(self):
+        try:
+            return self.stream.width
+        except AttributeError:
+            return None
+
+    @property
+    def height(self):
+        try:
+            return self.stream.height
+        except AttributeError:
+            return None
+
+    @property
+    def duration(self):
+        try:
+            return self.stream.duration
+        except AttributeError:
+            return None
+
+    @property
+    def fps(self):
+        try:
+            return self.stream.guessed_rate
+        except AttributeError:
+            return None
+
     def last_modified(self, default=datetime.now):
         try:
             last_modified = self.headers['Last-Modified']
         except KeyError:
             return default() if callable(default) else default
-        parsedate_to_datetime(last_modified)
+        return parsedate_to_datetime(last_modified)
 
     def poster(self):
         poster = BytesIO()

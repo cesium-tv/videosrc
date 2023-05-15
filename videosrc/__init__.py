@@ -33,7 +33,7 @@ async def login(url, **kwargs):
     try:
         return await crawler.login(url, **credentials)
 
-    except:
+    except Exception:
         raise AuthenticationError('Failure logging in')
 
 

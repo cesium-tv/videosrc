@@ -1,11 +1,9 @@
-import asyncio
 import logging
 import pickle
 
 from urllib.parse import urlparse
 from pprint import pprint
 from argparse import ArgumentParser, ArgumentTypeError
-from functools import partial
 
 from videosrc import crawl_sync
 
@@ -38,12 +36,12 @@ def load_state(path):
 
 def main(args):
     credentials = {}
-    kwargs = { 'credentials': credentials }
+    kwargs = {'credentials': credentials}
     url = args.url
 
     if args.username:
         credentials['username'] = args.username
-        
+
     if args.password:
         credentials['password'] = args.password
 

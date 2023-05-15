@@ -3,10 +3,12 @@ import json
 
 from urllib.parse import urlparse
 
-import snscrape.modules.twitter as sntwitter
+from snscrape.modules import twitter as sntwitter
+from snscrape.base import ScraperException
 
 from videosrc.crawlers.base import Crawler
-from videosrc.utils import md5sum, MediaInfo
+from videosrc.utils import md5sum, MediaInfo, dict_repr
+from videosrc.errors import InvalidOptionError
 
 
 LOGGER = logging.getLogger(__name__)
@@ -14,12 +16,15 @@ LOGGER.addHandler(logging.NullHandler())
 
 
 class TwitterCrawler(Crawler):
+    def __init__(self, state=0, **kwargs):
+        super().__init__(state=state, **kwargs)
+
     @staticmethod
     def check_url(url):
         urlp = urlparse(url)
         return urlp.netloc.endswith('twitter.com')
 
-    async def _iter_videos(self, url, items):
+    async def _iter_videos(self, url, items, max_count=100, max_days=None):
         for item in items:
             try:
                 media = item.media[0]
@@ -30,19 +35,22 @@ class TwitterCrawler(Crawler):
 
             sources = []
             for variant in media.variants:
-                #info = MediaInfo(variant.url)
-                sources.append(self.VideoSourceModel(
-                    extern_id=md5sum(variant.url),
-                    width=0,   # info.frame.width,
-                    height=0,  # info.frame.height,
-                    #fps=info.stream.guessed_rate,
-                    size=0,    # info.size,
-                    url=variant.url,
-                    original={
-                        'url': variant.url,
-                        # 'video': dict_repr(info.video),
-                    },
-                ))
+                with MediaInfo(variant.url) as info:
+                    sources.append(self.VideoSourceModel(
+                        extern_id=md5sum(variant.url),
+                        width=info.width,
+                        height=info.height,
+                        fps=info.fps,
+                        size=info.size,
+                        mime=variant.contentType,
+                        url=variant.url,
+                        original={
+                            'url': variant.url,
+                            'variant': dict_repr(variant),
+                            'video': dict_repr(info.video),
+                        },
+                    ))
+
             video = self.VideoModel(
                 extern_id=item.id,
                 title=item.rawContent,
@@ -50,6 +58,7 @@ class TwitterCrawler(Crawler):
                 duration=media.duration,
                 published=item.date,
                 sources=sources,
+                tags=item.hashtags,
                 original={
                     'url': item.url,
                     'json': json.loads(item.json()),
@@ -58,19 +67,27 @@ class TwitterCrawler(Crawler):
 
             try:
                 yield video
+
             except Exception as e:
                 LOGGER.exception(e)
 
+            else:
+                self._state = max(item.id, self._state)
+
     # https://twitter.com/MattWalshShow
-    async def crawl(self, url, **options):
+    async def crawl(self, url, **kwargs):
         # Parse name from URL
         name = urlparse(url).path.strip('/')
         # Get the tweets:
-        items = sntwitter.TwitterSearchScraper(f'from:{name}').get_items()
+        try:
+            items = sntwitter.TwitterUserScraper(name).get_items()
+        except ScraperException as e:
+            LOGGER.error(e.args[0])
+            raise InvalidOptionError('Unknown twitter user %s' % name)
+
         channel = self.ChannelModel(
             extern_id=md5sum(name),
             name=name,
             url=url,
         )
-        return channel, self._iter_videos(url, items)
-
+        return channel, self.iter_videos(url, items, **kwargs)

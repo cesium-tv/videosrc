@@ -472,7 +472,7 @@ class OdyseeTestCase(IsolatedAsyncioTestCase):
 
     async def test_crawl(self):
         channel, videos = await self.crawler.crawl('https://odysee.com/@timcast:c')
-        videos = [v async for v, s in videos]
+        videos = [v async for v in videos]
         self.assertEqual('timcast', channel.name)
         self.assertEqual(2, len(videos))
         self.assertEqual(

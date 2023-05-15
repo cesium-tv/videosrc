@@ -1,15 +1,12 @@
-import numbers
 import logging
 from urllib.parse import urlparse, urljoin, urlunparse
 from os.path import split as pathsplit
 from datetime import datetime
-from pprint import pprint
 
-from aiohttp.hdrs import METH_GET, METH_POST
+from aiohttp.hdrs import METH_POST
 from aiohttp_scraper import ScraperSession
 
-from videosrc.models import Channel, Video, VideoSource
-from videosrc.utils import md5sum
+from videosrc.utils import md5sum, url2mime
 from videosrc.crawlers.base import Crawler
 
 
@@ -41,7 +38,7 @@ def parse_channel_name(url):
         return urlp, pathsplit(urlp.path)[1]
     if urlp.path.startswith('/video-channels/'):
         port = urlp.port or 80 if urlp.scheme == 'http' else 443
-        channel_name = f'{pathsplit(url.path)[1]}@{urlp.netloc}:80'
+        channel_name = f'{pathsplit(url.path)[1]}@{urlp.netloc}:{port}'
         return urlp, channel_name
 
 
@@ -65,8 +62,8 @@ class PeerTubeCrawler(Crawler):
             'sort': '-publishedAt',
             'skipCount': 'true',
         }
-        if self.state:
-            params['start'] = self.state
+        if self._state:
+            params['start'] = self._state
         async with ScraperSession() as s:
             results = await s.get_json(url, params=params, **self.auth)
 
@@ -84,11 +81,12 @@ class PeerTubeCrawler(Crawler):
             for file in files:
                 sources.append(self.VideoSourceModel(
                     extern_id=md5sum(file['fileUrl']),
-                    width = file['resolution']['id'],
-                    height = None,
-                    fps = file['fps'],
-                    size = file['size'],
-                    url = file['fileUrl'],
+                    width=file['resolution']['id'],
+                    height=None,
+                    fps=file['fps'],
+                    size=file['size'],
+                    mime=url2mime(file['fileUrl']),
+                    url=file['fileUrl'],
                     original=file,
                 ))
 
@@ -106,14 +104,20 @@ class PeerTubeCrawler(Crawler):
                 sources=sources,
             )
 
-            self.state += 1
-            yield video, self.state
+            try:
+                yield video
+
+            except Exception as e:
+                LOGGER.exception(e)
+
+            self._state += 1
 
     async def login(self, url, username, password):
         async with ScraperSession() as s:
             r = await s.get_json(urljoin(url, '/api/v1/oauth-clients/local/'))
             params = r.json()
-            r = await s._request(METH_POST, urljoin(url, '/api/v1/users/token/'), data={
+            r = await s._request(METH_POST, urljoin(url,
+                                 '/api/v1/users/token/'), data={
                 'client_id': params['client_id'],
                 'client_secret': params['client_secret'],
                 'grant_type': 'password',
@@ -127,7 +131,7 @@ class PeerTubeCrawler(Crawler):
             }
         }
 
-    async def crawl(self, url, **options):
+    async def crawl(self, url, **kwargs):
         urlp, channel_name = parse_channel_name(url)
 
         # NOTE: We are assuming the channel name is local to the instance
@@ -150,4 +154,4 @@ class PeerTubeCrawler(Crawler):
             url=results['url'],
         )
 
-        return channel, self._iter_videos(url)
+        return channel, self.iter_videos(url, **kwargs)

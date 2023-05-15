@@ -1,18 +1,20 @@
 import re
 import json
+import logging
 
 from os.path import split as pathsplit
 from urllib.parse import urlparse, urljoin
 from datetime import datetime
-from pprint import pprint
 
 from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
-from videosrc.models import Channel, Video, VideoSource
-from videosrc.utils import md5sum
+from videosrc.utils import md5sum, url2mime
 from videosrc.crawlers.base import Crawler
 
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.addHandler(logging.NullHandler())
 
 # Used to parse JSON out of a block of javascript.
 JSON_EXTRACT = re.compile(r'\w\.\w\["\w{6,7}"\]=({.*?});')
@@ -57,7 +59,7 @@ class RumbleCrawler(Crawler):
             url = urljoin(url, li.article.a['href'])
             video_details = await get_video_details(url)
             published = parse_date(video_details['pubDate'])
-            if self.state and self.state > published:
+            if self._state and self._state > published:
                 LOGGER.info('Video published before given state')
                 break
             sources = [
@@ -66,6 +68,7 @@ class RumbleCrawler(Crawler):
                     width=src['meta']['w'],
                     height=src['meta']['h'],
                     size=src['meta']['size'],
+                    mime=url2mime(src['url']),
                     url=src['url'],
                     original=src,
                 ) for src in video_details['ua']['mp4'].values()
@@ -79,9 +82,17 @@ class RumbleCrawler(Crawler):
                 sources=sources,
                 original=str(li),
             )
-            yield video, published
 
-    async def crawl(self, url, **options):
+            try:
+                yield video
+
+            except Exception as e:
+                LOGGER.exception(e)
+
+            else:
+                self._state = published
+
+    async def crawl(self, url, **kwargs):
         # https://rumble.com/user/vivafrei
         urlp = urlparse(url)
         pparts = pathsplit(urlp.path.strip('/'))
@@ -98,4 +109,4 @@ class RumbleCrawler(Crawler):
             poster=poster,
         )
 
-        return channel, self._iter_videos(url, page)
+        return channel, self.iter_videos(url, page, **kwargs)

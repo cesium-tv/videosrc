@@ -103,7 +103,7 @@ class MRSSTestCase(IsolatedAsyncioTestCase):
 
     async def test_crawl(self):
         channel, videos = await self.crawler.crawl(self.server.url('/'))
-        videos = [v async for v, s in videos]
+        videos = [v async for v in videos]
         self.assertEqual('Calm Meditation', channel.name)
         self.assertEqual(2, len(videos))
         self.assertEqual('Shade', videos[0].title)

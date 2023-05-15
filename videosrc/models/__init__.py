@@ -20,6 +20,7 @@ class VideoSource:
     height: int
     size: int
     url: str
+    mime: str
     fps: int = None
 
 

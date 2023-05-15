@@ -3,5 +3,13 @@ class AuthenticationError(Exception):
     pass
 
 
-class MissingOption(Exception):
+class OptionError(Exception):
+    pass
+
+
+class MissingOptionError(OptionError):
+    pass
+
+
+class InvalidOptionError(OptionError):
     pass
