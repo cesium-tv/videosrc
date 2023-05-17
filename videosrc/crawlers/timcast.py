@@ -13,7 +13,6 @@ from bs4 import BeautifulSoup
 from videosrc.utils import get_tag_text, md5sum, url2mime
 from videosrc.crawlers.rumble import get_embed_details, parse_date
 from videosrc.crawlers.base import Crawler
-from videosrc.errors import MissingOptionError
 
 
 LOGGER = logging.getLogger(__name__)
@@ -45,6 +44,11 @@ def _no_images(request):
 
 
 class TimcastCrawler(Crawler):
+    auth_fields = {
+        'username': 'String',
+        'password': 'String',
+    }
+
     def __init__(self,  **kwargs):
         super().__init__(**kwargs)
         self.auth = {}
@@ -96,11 +100,13 @@ class TimcastCrawler(Crawler):
             await page.close()
             await browser.close()
 
-    async def login(self, **kwargs):
+    async def login(self, url, **kwargs):
         try:
-            url = kwargs['url']
-        except KeyError as e:
-            raise MissingOptionError(e.args[0])
+            username = kwargs['username']
+            password = kwargs['password']
+        except KeyError:
+            LOGGER.warning('No credentials, skipping login')
+            return
 
         retry = kwargs.pop('retry', 3)
         url = urljoin(url, '/login/')
@@ -108,7 +114,8 @@ class TimcastCrawler(Crawler):
         for i in range(1, 1 + retry):
             try:
                 LOGGER.debug('Login attempt %i', i)
-                self.auth = await self._login(url, **kwargs)
+                self.auth = await self._login(
+                    url, username, password, **kwargs)
                 break
 
             except (PyppeteerError, asyncio.TimeoutError):
@@ -190,6 +197,8 @@ class TimcastCrawler(Crawler):
                 page = BeautifulSoup(html, 'html.parser')
 
     async def crawl(self, url, **kwargs):
+        await self.login(url, **kwargs)
+
         async with ScraperSession() as s:
             page = BeautifulSoup(
                 await s.get_html(

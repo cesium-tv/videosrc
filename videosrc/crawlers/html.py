@@ -16,6 +16,11 @@ LOGGER.addHandler(logging.NullHandler())
 
 
 class HTMLCrawler(Crawler):
+    auth_fields = {
+        'username': 'String',
+        'password': 'String',
+    }
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.auth = {}
@@ -26,7 +31,14 @@ class HTMLCrawler(Crawler):
         # chosen as a default if no other crawler claims a url.
         return False
 
-    async def login(self, username=None, password=None):
+    async def login(self, url, **kwargs):
+        try:
+            username = kwargs['username']
+            password = kwargs['password']
+        except KeyError:
+            LOGGER.warning('No credentials, skipping login')
+            return
+
         self.auth = basic_auth(username, password)
 
     async def _iter_videos(self, url, soup):
@@ -69,6 +81,8 @@ class HTMLCrawler(Crawler):
                 LOGGER.exception(e)
 
     async def crawl(self, url, **kwargs):
+        await self.login(url, **kwargs)
+
         async with ScraperSession() as s:
             r = await s._request(METH_GET, url, proxy=self._proxy, **self.auth)
             try:

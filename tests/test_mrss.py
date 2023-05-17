@@ -96,7 +96,8 @@ class MRSSTestCase(IsolatedAsyncioTestCase):
             f.close()
 
     async def test_login(self):
-        await self.crawler.login('foobar', 'quux')
+        await self.crawler.login(
+            self.server.url(), username='foobar', password='quux')
         self.assertEqual({
             'headers': {'Authorization': 'Zm9vYmFyOnF1dXg='}
         }, self.crawler.auth)

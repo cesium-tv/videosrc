@@ -50,7 +50,7 @@ def main(args):
         kwargs['save_state'] = save_state_factory(args.state)
 
     if args.proxy:
-        kwargs['proxies'] = args.proxy
+        kwargs['proxy'] = args.proxy
 
     channel, videos = crawl_sync(url, **kwargs)
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-p', '--password', help='Password')
     parser.add_argument(
-        '-P', '--proxy', action='append', type=url, help='Proxy server url')
+        '-P', '--proxy', type=url, help='Proxy server url')
     parser.add_argument(
         '-s', '--state', help='Path at which to save crawl state')
 

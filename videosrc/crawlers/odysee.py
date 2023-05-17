@@ -2,7 +2,7 @@ import re
 import time
 import logging
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 from datetime import datetime
 
 from aiohttp.hdrs import METH_POST
@@ -46,11 +46,13 @@ class OdyseeCrawler(Crawler):
             )
         return (await r.json())['result']
 
-    async def login(self):
+    async def login(self, url, **kwargs):
+        # url = 'https://api.odysee.com/user/new'
+        url = urljoin(self.api_url, '/user/new')
         async with ScraperSession() as s:
             r = await s._request(
                 METH_POST,
-                'https://api.odysee.com/user/new',
+                url,
                 proxy=self._proxy,
                 data={
                     'auth_token': '',
@@ -289,6 +291,8 @@ class OdyseeCrawler(Crawler):
             page_number += 1
 
     async def crawl(self, url, **kwargs):
+        await self.login(url, **kwargs)
+
         # https://odysee.com/@timcast:c
         urlp = urlparse(url)
         channel_name = re.match(r'/@(\w+):c', urlp.path).group(1)

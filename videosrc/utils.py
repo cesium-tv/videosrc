@@ -151,7 +151,10 @@ class MediaInfo:
         if self._video is None:
             with requests.get(self.url, stream=True) as r:
                 self._headers = r.headers
-                self._video = av.open(r.raw)
+                try:
+                    self._video = av.open(r.raw)
+                except Exception as e:
+                    LOGGER.warning(e, exc_info=True)
         return self._video
 
     @property

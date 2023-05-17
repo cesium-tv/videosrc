@@ -16,6 +16,8 @@ LOGGER.addHandler(logging.NullHandler())
 
 
 class Crawler(ABC):
+    auth_fields = {}
+
     def __init__(self, state=None, save_state=None, proxy=VIDEOSRC_PROXY,
                  ChannelModel=Channel, VideoModel=Video,
                  VideoSourceModel=VideoSource):
@@ -36,7 +38,7 @@ class Crawler(ABC):
             return
         self._save_state(self._state)
 
-    async def login(self, **credentials):
+    async def login(self, *args, **kwargs):
         raise NotImplementedError()
 
     async def _iter_videos(self, *args, **kwargs):

@@ -43,6 +43,11 @@ def parse_channel_name(url):
 
 
 class PeerTubeCrawler(Crawler):
+    auth_fields = {
+        'username': 'String',
+        'password': 'String',
+    }
+
     def __init__(self, state=0, **kwargs):
         super().__init__(state=state, **kwargs)
         self.auth = {}
@@ -114,7 +119,14 @@ class PeerTubeCrawler(Crawler):
 
             self._state += 1
 
-    async def login(self, url, username, password):
+    async def login(self, url, **kwargs):
+        try:
+            username = kwargs['username']
+            password = kwargs['password']
+        except KeyError:
+            LOGGER.warning('No credentials, skipping login')
+            return
+
         async with ScraperSession() as s:
             r = await s.get_json(
                 urljoin(url, '/api/v1/oauth-clients/local/'),
@@ -140,6 +152,8 @@ class PeerTubeCrawler(Crawler):
         }
 
     async def crawl(self, url, **kwargs):
+        await self.login(url, **kwargs)
+
         urlp, channel_name = parse_channel_name(url)
 
         # NOTE: We are assuming the channel name is local to the instance

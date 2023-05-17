@@ -6,6 +6,7 @@ from responses_server import ResponsesServer
 from videosrc.crawlers.odysee import OdyseeCrawler
 
 
+AUTH = {'auth_token': 'foobar'}
 RSP0 = {'id': 0,
  'jsonrpc': '2.0',
  'result': {'lbry://@timcast#c': {'address': 'bMyDG3xgFUK4fao4dU8jq1THhEGhJr5z55',
@@ -459,6 +460,7 @@ class OdyseeTestCase(IsolatedAsyncioTestCase):
             responses_kwargs={'registry': OrderedRegistry})
         self.server.start()
         self.crawler = OdyseeCrawler(api_url=self.server.url())
+        self.server.post(self.server.url('/user/new'), json=AUTH)
         self.server.post(self.server.url(), json=RSP0)
         self.server.post(self.server.url(), json=RSP1)
         self.server.post(self.server.url(), json=RSP2)
@@ -468,7 +470,7 @@ class OdyseeTestCase(IsolatedAsyncioTestCase):
         self.server.stop()
 
     async def test_login(self):
-        pass #  await self.crawler.login()
+        await self.crawler.login(self.server.url())
 
     async def test_crawl(self):
         channel, videos = await self.crawler.crawl('https://odysee.com/@timcast:c')

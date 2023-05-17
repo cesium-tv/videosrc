@@ -17,6 +17,11 @@ LOGGER.addHandler(logging.NullHandler())
 
 
 class MRSSCrawler(HTMLCrawler):
+    auth_fields = {
+        'username': 'String',
+        'password': 'String',
+    }
+
     @staticmethod
     def check_url(url):
         urlp = urlparse(url)
@@ -129,7 +134,9 @@ class MRSSCrawler(HTMLCrawler):
 #         <height>114</height>
 #         <width>114</width>
 #     </image>
-    async def crawl(self, url, **options):
+    async def crawl(self, url, **kwargs):
+        await self.login(url, **kwargs)
+
         async with ScraperSession() as s:
             r = await s._request(METH_GET, url, proxy=self._proxy)
             try:
