@@ -17,7 +17,7 @@ with open(REQUIREMENTS, 'r') as f:
 
 setup(
     name='videosrc',
-    version='0.1.6',
+    version='0.1.9',
     description='Video src crawler',
     long_description=LONG_DESCRIPTION,
     install_requires=INSTALL_REQUIRES,
@@ -29,6 +29,6 @@ setup(
     },
     author='Ben Timby',
     author_email='btimby@gmail.com',
-    url='https://github.com/btimby/cesium.tv/vidsrc/',
+    url='https://github.com/cesium-tv/videosrc/',
     packages=find_packages(),
 )

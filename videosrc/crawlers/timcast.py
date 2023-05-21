@@ -125,9 +125,10 @@ class TimcastCrawler(Crawler):
                 LOGGER.exception('Login failed, retrying')
                 time.sleep(3 ** i)
 
-    async def _iter_videos(self, url, page):
+    async def _iter_page_videos(self, url, page):
         grid = page.find(
             'div', class_='t-grid:s:fit:2 t-grid:m:fit:4 t-pad:25pc:top')
+        state = self._state
         for article in grid.find_all('div', class_='article'):
             video_link = article.find('a', class_='image')
             thumbnail = video_link.img['src']
@@ -139,13 +140,19 @@ class TimcastCrawler(Crawler):
                     await s.get_html(video_page_url, proxy=self._proxy,
                                      **self.auth),
                     'html.parser')
-            iframe_tag = video_page.find('iframe')
-            embed_url = iframe_tag['src']
+            try:
+                iframe_tag = video_page.find('iframe')
+                embed_url = iframe_tag['src']
+
+            except TypeError:
+                LOGGER.warning('Skipped video, missing iframe', exc_info=True)
+                continue
+
             video_details = await get_embed_details(
                 embed_url, proxy=self._proxy)
             pubDate = parse_date(video_details['pubDate'])
 
-            if self._state and pubDate < self._state:
+            if state and pubDate < state:
                 LOGGER.info('Video published before last state %s', pubDate)
                 return
 
@@ -177,14 +184,15 @@ class TimcastCrawler(Crawler):
                 LOGGER.exception(e)
 
             else:
-                self._state = pubDate
+                self._state = max(self._state, pubDate) if self._state \
+                                                        else pubDate
 
-    async def _iter_pages(self, url, page):
+    async def _iter_videos(self, url, page):
         page_num = 1
         async with ScraperSession() as s:
             while True:
                 LOGGER.debug('Scraping page %i', page_num)
-                async for video in self._iter_videos(url, page):
+                async for video in self._iter_page_videos(url, page):
                     yield video
                 page_num += 1
                 page_url = url + f'page/{page_num}/'
@@ -210,4 +218,4 @@ class TimcastCrawler(Crawler):
                 name=title,
             )
 
-        return channel, self._iter_pages(url, page, **kwargs)
+        return channel, self.iter_videos(url, page, **kwargs)

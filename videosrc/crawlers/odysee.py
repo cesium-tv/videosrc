@@ -283,7 +283,8 @@ class OdyseeCrawler(Crawler):
                     LOGGER.exception(e)
 
                 else:
-                    self._state = published
+                    self._state = max(self._state, published) if self._state \
+                                                              else published
 
             if len(items) + 1 < PAGE_SIZE:
                 break

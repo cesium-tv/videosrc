@@ -1,1 +1,1 @@
-recursive-include vidsrc
+recursive-include videosrc *.py

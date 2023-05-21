@@ -25,12 +25,18 @@ class TwitterCrawler(Crawler):
         return urlp.netloc.endswith('twitter.com')
 
     async def _iter_videos(self, url, items, max_count=100, max_days=None):
+        state = self._state
         for item in items:
             try:
                 media = item.media[0]
             except (TypeError, IndexError):
                 continue
+
             if not isinstance(media, sntwitter.Video):
+                continue
+
+            if state and item.id < state:
+                LOGGER.info('Video published before last state %i', state)
                 continue
 
             sources = []
@@ -72,7 +78,8 @@ class TwitterCrawler(Crawler):
                 LOGGER.exception(e)
 
             else:
-                self._state = max(item.id, self._state)
+                self._state = max(self._state, item.id) if self._state \
+                                                        else item.id
 
     # https://twitter.com/MattWalshShow
     async def crawl(self, url, **kwargs):

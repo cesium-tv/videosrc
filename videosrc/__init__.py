@@ -25,28 +25,41 @@ def detect_crawler(url):
 
 
 async def login(url, **kwargs):
-    credentials = kwargs.pop('credentials', {})
+    init_kwargs = {
+        'state': kwargs.pop('state', None),
+        'save_state': kwargs.pop('save_state', None),
+    }
+    try:
+        init_kwargs['proxy'] = kwargs.pop('proxy')
+
+    except KeyError:
+        pass
 
     crawler_klass = detect_crawler(url)[0]
-    crawler = crawler_klass(**kwargs)
+    crawler = crawler_klass(**init_kwargs)
 
     try:
-        return await crawler.login(url, **credentials)
+        return await crawler.login(url, **kwargs)
 
     except Exception:
         raise AuthenticationError('Failure logging in')
 
 
 async def crawl(url, **kwargs):
-    credentials = kwargs.pop('credentials', None)
+    init_kwargs = {
+        'state': kwargs.pop('state', None),
+        'save_state': kwargs.pop('save_state', None),
+    }
+    try:
+        init_kwargs['proxy'] = kwargs.pop('proxy')
+
+    except KeyError:
+        pass
 
     crawler_klass = detect_crawler(url)[0]
-    crawler = crawler_klass(**kwargs)
+    crawler = crawler_klass(**init_kwargs)
 
-    if credentials:
-        await crawler.login(url, **credentials)
-
-    return await crawler.crawl(url)
+    return await crawler.crawl(url, **kwargs)
 
 
 def login_sync(*args, **kwargs):

@@ -56,11 +56,12 @@ class RumbleCrawler(Crawler):
         return urlp.netloc.endswith('rumble.com')
 
     async def _iter_videos(self, url, page):
+        state = self._state
         for li in page.find_all('li', class_='video-listing-entry'):
             url = urljoin(url, li.article.a['href'])
             video_details = await get_video_details(url, proxy=self._proxy)
             published = parse_date(video_details['pubDate'])
-            if self._state and self._state > published:
+            if state and state > published:
                 LOGGER.info('Video published before given state')
                 break
             sources = [
@@ -91,7 +92,8 @@ class RumbleCrawler(Crawler):
                 LOGGER.exception(e)
 
             else:
-                self._state = published
+                self._state = max(self._state, published) if self._state \
+                                                          else published
 
     async def crawl(self, url, **kwargs):
         # https://rumble.com/user/vivafrei
