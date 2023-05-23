@@ -33,7 +33,7 @@ class Crawler(ABC):
     def check_url(url):
         raise NotImplementedError()
 
-    def save_state(self):
+    async def save_state(self):
         if not callable(self._save_state):
             LOGGER.info('No state saving function')
             return
@@ -74,7 +74,7 @@ class Crawler(ABC):
                     LOGGER.info('Reached max item age')
                     break
 
-        self.save_state()
+        await self.save_state()
 
     async def crawl(self, url, **kwargs):
         return await self._crawl(url, **kwargs)
