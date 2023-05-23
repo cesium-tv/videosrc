@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 from videosrc.utils import get_tag_text, md5sum, url2mime
 from videosrc.crawlers.rumble import get_embed_details, parse_date
 from videosrc.crawlers.base import Crawler
+from videosrc.errors import StateReached
 
 
 LOGGER = logging.getLogger(__name__)
@@ -24,11 +25,6 @@ JSON_TRIM = re.compile(r'^(.*)"path":.*,("w":.*$)')
 U_FIELD = '#user_login'
 P_FIELD = '#user_pass'
 SUBMIT = '#wp-submit'
-
-
-class StateReached(Exception):
-    def __init__(self):
-        super().__init__('State reached')
 
 
 def _no_images(request):

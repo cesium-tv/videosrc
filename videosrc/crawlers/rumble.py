@@ -64,17 +64,41 @@ class RumbleCrawler(Crawler):
             if state and state > published:
                 LOGGER.info('Video published before given state')
                 break
-            sources = [
-                self.VideoSourceModel(
-                    extern_id=md5sum(src['url']),
-                    width=src['meta']['w'],
-                    height=src['meta']['h'],
-                    size=src['meta']['size'],
-                    mime=url2mime(src['url']),
-                    url=src['url'],
-                    original=src,
-                ) for src in video_details['ua']['mp4'].values()
-            ]
+
+            sources = []
+            try:
+                mpfours = video_details['ua']['mp4'].values()
+
+            except AttributeError:
+                LOGGER.warning('No mp4 videos!')
+
+            else:
+                sources.extend([
+                    self.VideoSourceModel(
+                        extern_id=md5sum(src['url']),
+                        width=src['meta']['w'],
+                        height=src['meta']['h'],
+                        size=src['meta']['size'],
+                        mime=url2mime(src['url']),
+                        url=src['url'],
+                        original=src,
+                    ) for src in mpfours
+                ])
+
+            live_stream = video_details['ua'].get('hls')
+            if live_stream:
+                sources.append(
+                    self.VideoSourceModel(
+                        extern_id=md5sum(live_stream['url']),
+                        url=live_stream['url'],
+                        original=live_stream,
+                    )
+                )
+
+            if not sources:
+                LOGGER.warning('Video has no sources! Skipping...')
+                continue
+
             video = self.VideoModel(
                 extern_id=md5sum(url),
                 title=li.article.h3.text,

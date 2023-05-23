@@ -8,7 +8,7 @@ from snscrape.base import ScraperException
 
 from videosrc.crawlers.base import Crawler
 from videosrc.utils import md5sum, MediaInfo, dict_repr
-from videosrc.errors import InvalidOptionError
+from videosrc.errors import InvalidOptionError, StateReached
 
 
 LOGGER = logging.getLogger(__name__)
@@ -42,8 +42,7 @@ class TwitterCrawler(Crawler):
                 continue
 
             if state and item.id < state:
-                LOGGER.info('Video published before last state %i', state)
-                continue
+                raise StateReached()
 
             sources = []
             for variant in media.variants:

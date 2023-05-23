@@ -6,3 +6,5 @@ av==9.2.0
 snscrape @ git+https://github.com/JustAnotherArchivist/snscrape.git
 Pillow==9.5.0
 pytube==15.0.0
+asgiref==3.7.0
+

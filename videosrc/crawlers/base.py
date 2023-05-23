@@ -6,7 +6,7 @@ from abc import ABC
 from datetime import datetime, timedelta
 
 from videosrc.models import Channel, Video, VideoSource
-from videosrc.errors import InvalidOptionError
+from videosrc.errors import InvalidOptionError, StateReached
 from videosrc.utils import aenumerate
 
 
@@ -62,6 +62,9 @@ class Crawler(ABC):
         async for i, video in aenumerate(self._iter_videos(*args, **kwargs)):
             try:
                 yield video
+
+            except StateReached:
+                break
 
             except Exception as e:
                 LOGGER.exception(e)

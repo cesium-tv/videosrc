@@ -13,3 +13,8 @@ class MissingOptionError(OptionError):
 
 class InvalidOptionError(OptionError):
     pass
+
+
+class StateReached(Exception):
+    def __init__(self):
+        super().__init__('State reached')

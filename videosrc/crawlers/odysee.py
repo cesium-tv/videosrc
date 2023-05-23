@@ -14,14 +14,14 @@ from videosrc.crawlers.base import Crawler
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
+LOGIN_URL = 'https://api.odysee.com/api/v1/proxy'
 API_URL = 'https://api.na-backend.odysee.com/api/v1/proxy'
 PAGE_SIZE = 20
 
 
 class OdyseeCrawler(Crawler):
-    def __init__(self, state=0, api_url=API_URL, **kwargs):
+    def __init__(self, state=0, **kwargs):
         super().__init__(state=state, **kwargs)
-        self.api_url = api_url
         self.auth = None
 
     @staticmethod
@@ -34,7 +34,7 @@ class OdyseeCrawler(Crawler):
         async with ScraperSession() as s:
             r = await s.request(
                 METH_POST,
-                self.api_url,
+                API_URL,
                 proxy=self._proxy,
                 params={'m': method},
                 json={
@@ -44,11 +44,14 @@ class OdyseeCrawler(Crawler):
                     "id": ts,
                 }
             )
-        return (await r.json())['result']
+
+            json = await r.json()
+
+        return json['result']
 
     async def login(self, url, **kwargs):
         # url = 'https://api.odysee.com/user/new'
-        url = urljoin(self.api_url, '/user/new')
+        url = urljoin(LOGIN_URL, '/user/new')
         async with ScraperSession() as s:
             r = await s._request(
                 METH_POST,
@@ -61,7 +64,14 @@ class OdyseeCrawler(Crawler):
                               'WKjy5hf6PwZcHDV542V',
                     }
             )
-        self.auth = (await r.json())['auth_token']
+
+            json = await r.json()
+
+        try:
+            self.auth = json['data']['auth_token']
+
+        except KeyError:
+            raise AuthenticationError('Did not receive token')
 
     # {
     #     "address": "bMyDG3xgFUK4fao4dU8jq1THhEGhJr5z55",
@@ -270,7 +280,7 @@ class OdyseeCrawler(Crawler):
                     description=item['value']['description'],
                     poster=item['value']['thumbnail']['url'],
                     duration=item['value']['video']['duration'],
-                    tags=item['value']['tags'],
+                    tags=item['value'].get('tags'),
                     published=published,
                     sources=[source],
                     original=item,
@@ -296,8 +306,10 @@ class OdyseeCrawler(Crawler):
 
         # https://odysee.com/@timcast:c
         urlp = urlparse(url)
-        channel_name = re.match(r'/@(\w+):c', urlp.path).group(1)
-        lbry_url = f'lbry://@{channel_name}#c'
+        m = re.match(r'/@(\w+):(\w)', urlp.path)
+        channel_name = m.group(1)
+        hash = m.group(2)
+        lbry_url = f'lbry://@{channel_name}#{hash}'
         result = await self._make_request('resolve', {
             'urls': [
                 lbry_url,
