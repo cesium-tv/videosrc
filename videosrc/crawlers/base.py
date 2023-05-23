@@ -38,7 +38,7 @@ class Crawler(ABC):
             LOGGER.info('No state saving function')
             return
         # NOTE: Django ORM does not work under async.
-        sync_to_async(self._save_state)(self._state)
+        await sync_to_async(self._save_state)(self._state)
 
     async def login(self, *args, **kwargs):
         raise NotImplementedError()
