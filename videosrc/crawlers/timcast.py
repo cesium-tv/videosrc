@@ -26,14 +26,9 @@ P_FIELD = '#user_pass'
 SUBMIT = '#wp-submit'
 
 
-class LimitReached(Exception):
+class StateReached(Exception):
     def __init__(self):
-        super().__init__('Limit reached')
-
-
-class DepthReached(Exception):
-    def __init__(self):
-        super().__init__('Depth reached')
+        super().__init__('State reached')
 
 
 def _no_images(request):
@@ -153,8 +148,7 @@ class TimcastCrawler(Crawler):
             pubDate = parse_date(video_details['pubDate'])
 
             if state and pubDate < state:
-                LOGGER.info('Video published before last state %s', pubDate)
-                return
+                raise StateReached()
 
             sources = [
                 self.VideoSourceModel(
@@ -192,8 +186,12 @@ class TimcastCrawler(Crawler):
         async with ScraperSession() as s:
             while True:
                 LOGGER.debug('Scraping page %i', page_num)
-                async for video in self._iter_page_videos(url, page):
-                    yield video
+                try:
+                    async for video in self._iter_page_videos(url, page):
+                        yield video
+                except StateReached:
+                    LOGGER.debug('Aborting', exc_info=True)
+                    break
                 page_num += 1
                 page_url = url + f'page/{page_num}/'
                 urlp = urlparse(page_url)
