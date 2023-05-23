@@ -47,7 +47,7 @@ class TwitterCrawler(Crawler):
 
             sources = []
             for variant in media.variants:
-                with MediaInfo(variant.url) as info:
+                with MediaInfo(variant.url, proxy=self._proxy) as info:
                     sources.append(self.VideoSourceModel(
                         extern_id=md5sum(variant.url),
                         width=info.width,

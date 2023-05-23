@@ -126,11 +126,18 @@ class MediaInfo:
 
     Uses lazy-loading properties to do as little work as is necessary.
     """
-    def __init__(self, url):
+    def __init__(self, url, proxy=None):
         self.url = url
         self._video = None
         self._frame = None
         self._headers = None
+        if proxy:
+            self._proxies = {
+                'http': proxy,
+                'https': proxy,
+            }
+        else:
+            self._proxies = None
 
     def __enter__(self):
         return self
@@ -142,14 +149,15 @@ class MediaInfo:
     def headers(self):
         if self._headers is None:
             # NOTE: We have not yet fetched headers, do a quick HEAD request.
-            with requests.head(self.url) as r:
+            with requests.head(self.url, proxies=self._proxies) as r:
                 self._headers = r.headers
         return self._headers
 
     @property
     def video(self):
         if self._video is None:
-            with requests.get(self.url, stream=True) as r:
+            with requests.get(
+                self.url, proxies=self._proxies, stream=True) as r:
                 self._headers = r.headers
                 try:
                     self._video = av.open(r.raw)

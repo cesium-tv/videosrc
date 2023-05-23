@@ -71,7 +71,7 @@ class MRSSCrawler(HTMLCrawler):
             keywords.extend([
                 t.text for t in item.find_all('media:category')
             ])
-            with MediaInfo(url) as info:
+            with MediaInfo(url, proxy=self._proxy) as info:
                 source = VideoSource(
                     extern_id=guid,
                     width=info.width,

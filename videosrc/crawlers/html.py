@@ -46,7 +46,7 @@ class HTMLCrawler(Crawler):
             # NOTE: Link might be absolute.
             href = urljoin(url, a['href'])
             guid = md5sum(href)
-            with MediaInfo(href) as info:
+            with MediaInfo(href, proxy=self._proxy) as info:
                 source = self.VideoSourceModel(
                     extern_id=guid,
                     width=info.width,
