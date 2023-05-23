@@ -15,6 +15,12 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
 
+def split_description(s):
+    # First line is title, the rest are description.
+    lines = [ll for ll in [l.strip() for l in s.split('\n')] if ll]
+    return lines[0], lines[1:].join('\n') or None
+
+
 class TwitterCrawler(Crawler):
     def __init__(self, state=0, **kwargs):
         super().__init__(state=state, **kwargs)
@@ -57,9 +63,11 @@ class TwitterCrawler(Crawler):
                         },
                     ))
 
+            title, desc = split_description(item.rawContent)
             video = self.VideoModel(
                 extern_id=item.id,
-                title=item.rawContent,
+                title=title,
+                description=desc,
                 poster=media.thumbnailUrl,
                 duration=media.duration,
                 published=item.date,
@@ -92,8 +100,8 @@ class TwitterCrawler(Crawler):
 
         # Get the tweets:
         try:
-            items = sntwitter.TwitterUserScraper(
-                name,
+            items = sntwitter.TwitterSearchScraper(
+                f'from:{name}',
                 proxies=proxies,
             ).get_items()
 

@@ -1,6 +1,7 @@
 import os
 import logging
 
+from asgiref.sync import sync_to_async
 from abc import ABC
 from datetime import datetime, timedelta
 
@@ -36,7 +37,8 @@ class Crawler(ABC):
         if not callable(self._save_state):
             LOGGER.info('No state saving function')
             return
-        self._save_state(self._state)
+        # NOTE: Django ORM does not work under async.
+        sync_to_async(self._save_state)(self._state)
 
     async def login(self, *args, **kwargs):
         raise NotImplementedError()

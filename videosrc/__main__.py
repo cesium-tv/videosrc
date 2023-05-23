@@ -35,15 +35,14 @@ def load_state(path):
 
 
 def main(args):
-    credentials = {}
-    kwargs = {'credentials': credentials}
+    kwargs = {}
     url = args.url
 
     if args.username:
-        credentials['username'] = args.username
+        kwargs['username'] = args.username
 
     if args.password:
-        credentials['password'] = args.password
+        kwargs['password'] = args.password
 
     if args.state:
         kwargs['state'] = load_state(args.state)
