@@ -54,7 +54,7 @@ class TimcastCrawler(Crawler):
         return urlp.netloc.endswith('timcast.com')
 
     async def _login(self, url, username, password, headless=True,
-                     timeout=2000):
+                     login_timeout=12000):
         args = [
             '--start-maximized',
             '--no-sandbox',
@@ -95,14 +95,7 @@ class TimcastCrawler(Crawler):
             await page.close()
             await browser.close()
 
-    async def login(self, url, **kwargs):
-        try:
-            username = kwargs.pop('username')
-            password = kwargs.pop('password')
-        except KeyError:
-            LOGGER.warning('No credentials, skipping login')
-            return
-
+    async def login(self, url, username, password, **kwargs):
         retry = kwargs.pop('retry', 3)
         url = urljoin(url, '/login/')
 
@@ -203,7 +196,15 @@ class TimcastCrawler(Crawler):
                 page = BeautifulSoup(html, 'html.parser')
 
     async def crawl(self, url, **kwargs):
-        await self.login(url, **kwargs)
+        try:
+            username = kwargs.pop('username')
+            password = kwargs.pop('password')
+
+        except KeyError:
+            LOGGER.warning('No credentials, skipping login')
+
+        else:
+            await self.login(url, username, password, **kwargs)
 
         async with ScraperSession() as s:
             page = BeautifulSoup(
