@@ -77,7 +77,7 @@ class TimcastCrawler(Crawler):
             await page.setViewport({'width': 1366, 'height': 768})
 
             LOGGER.debug('Opening url: %s', url)
-            await page.goto(url, timeout=timeout, waitFor='networkidle2')
+            await page.goto(url, timeout=login_timeout, waitFor='networkidle2')
 
             LOGGER.debug('Typing')
             await page.type(U_FIELD, username)
