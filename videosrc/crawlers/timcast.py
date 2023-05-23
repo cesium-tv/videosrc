@@ -97,8 +97,8 @@ class TimcastCrawler(Crawler):
 
     async def login(self, url, **kwargs):
         try:
-            username = kwargs['username']
-            password = kwargs['password']
+            username = kwargs.pop('username')
+            password = kwargs.pop('password')
         except KeyError:
             LOGGER.warning('No credentials, skipping login')
             return
