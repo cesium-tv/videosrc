@@ -18,7 +18,7 @@ LOGGER.addHandler(logging.NullHandler())
 def split_description(s):
     # First line is title, the rest are description.
     lines = [ll for ll in [l.strip() for l in s.split('\n')] if ll]
-    return lines[0], lines[1:].join('\n') or None
+    return lines[0], '\n'.join(lines[1:]) or None
 
 
 class TwitterCrawler(Crawler):
@@ -63,7 +63,12 @@ class TwitterCrawler(Crawler):
                         },
                     ))
 
-            title, desc = split_description(item.rawContent)
+            try:
+                title, desc = split_description(item.rawContent)
+            except Exception:
+                LOGGER.warning('Error splitting title', exc_info=True)
+                title, desc = item.rawContent, None
+
             video = self.VideoModel(
                 extern_id=item.id,
                 title=title,
