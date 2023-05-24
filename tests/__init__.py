@@ -1,8 +1,13 @@
+import os
 import logging
+
+
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'ERROR').upper()
 
 LOGGER = logging.getLogger()
 LOGGER.addHandler(logging.StreamHandler())
-LOGGER.setLevel(logging.ERROR)
+LOGGER.setLevel(logging.getLevelName(LOG_LEVEL))
+
 
 from tests.test_html import *
 from tests.test_mrss import *
