@@ -22,12 +22,22 @@ class Crawler(ABC):
     def __init__(self, state=None, save_state=None, proxy=VIDEOSRC_PROXY,
                  ChannelModel=Channel, VideoModel=Video,
                  VideoSourceModel=VideoSource):
+        self._save_state = []
         self._state = state
-        self._save_state = save_state
         self._proxy = proxy
+        if save_state is not None:
+            self.on_state = save_state
         self.ChannelModel = ChannelModel
         self.VideoModel = VideoModel
         self.VideoSourceModel = VideoSourceModel
+
+    def __setattr__(self, name, value):
+        # NOTE: mock property with setter only.
+        if name =='on_state':
+            assert callable(value), 'State saving function must be callable'
+            self._save_state.append(value)
+            return
+        return super().__setattr__(name, value)
 
     @staticmethod
     def check_url(url):
@@ -37,8 +47,14 @@ class Crawler(ABC):
         if not callable(self._save_state):
             LOGGER.info('No state saving function')
             return
-        # NOTE: Django ORM does not work under async.
-        await sync_to_async(self._save_state)(self._state)
+
+        for f in self._save_state:
+            # NOTE: Caller's environment may not play nicely with asyncio.
+            try:
+                await sync_to_async(f)(self._state)
+
+            except Exception:
+                LOGGER.exception('Error saving state when calling %s', f)
 
     async def login(self, *args, **kwargs):
         raise NotImplementedError()

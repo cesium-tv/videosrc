@@ -6,7 +6,7 @@ from responses_server import ResponsesServer
 from videosrc.crawlers.odysee import OdyseeCrawler
 
 
-AUTH = {'auth_token': 'foobar'}
+AUTH = {'data': {'auth_token': 'foobar'}}
 RSP0 = {'id': 0,
  'jsonrpc': '2.0',
  'result': {'lbry://@timcast#c': {'address': 'bMyDG3xgFUK4fao4dU8jq1THhEGhJr5z55',
@@ -459,12 +459,12 @@ class OdyseeTestCase(IsolatedAsyncioTestCase):
         self.server = ResponsesServer(
             responses_kwargs={'registry': OrderedRegistry})
         self.server.start()
-        self.crawler = OdyseeCrawler(api_url=self.server.url())
+        self.crawler = OdyseeCrawler(base_url=self.server.url())
         self.server.post(self.server.url('/user/new'), json=AUTH)
-        self.server.post(self.server.url(), json=RSP0)
-        self.server.post(self.server.url(), json=RSP1)
-        self.server.post(self.server.url(), json=RSP2)
-        self.server.post(self.server.url(), json=RSP3)
+        self.server.post(self.server.url('/api/v1/proxy'), json=RSP0)
+        self.server.post(self.server.url('/api/v1/proxy'), json=RSP1)
+        self.server.post(self.server.url('/api/v1/proxy'), json=RSP2)
+        self.server.post(self.server.url('/api/v1/proxy'), json=RSP3)
 
     def tearDown(self):
         self.server.stop()

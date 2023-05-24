@@ -124,6 +124,7 @@ class RumbleCrawler(Crawler):
         urlp = urlparse(url)
         pparts = pathsplit(urlp.path.strip('/'))
 
+        # TODO: handle paging (current only fetch first page of results)
         async with ScraperSession() as s:
             html = await s.get_html(url, proxy=self._proxy)
             page = BeautifulSoup(html, 'html.parser')

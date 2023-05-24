@@ -9,6 +9,7 @@ from aiohttp.hdrs import METH_POST
 from aiohttp_scraper import ScraperSession
 
 from videosrc.crawlers.base import Crawler
+from videosrc.errors import AuthenticationError
 
 
 LOGGER = logging.getLogger(__name__)
@@ -20,8 +21,9 @@ PAGE_SIZE = 20
 
 
 class OdyseeCrawler(Crawler):
-    def __init__(self, state=0, **kwargs):
+    def __init__(self, state=0, base_url=None, **kwargs):
         super().__init__(state=state, **kwargs)
+        self._base_url = base_url
         self.auth = None
 
     @staticmethod
@@ -30,11 +32,15 @@ class OdyseeCrawler(Crawler):
         return urlp.netloc.endswith('odysee.com')
 
     async def _make_request(self, method, params):
+        url = API_URL
+        if self._base_url:
+            # NOTE: override base url.
+            url = urljoin(self._base_url, urlparse(url).path)
         ts = int(time.time())
         async with ScraperSession() as s:
             r = await s.request(
                 METH_POST,
-                API_URL,
+                url,
                 proxy=self._proxy,
                 params={'m': method},
                 json={
@@ -50,8 +56,9 @@ class OdyseeCrawler(Crawler):
         return json['result']
 
     async def login(self, url, **kwargs):
-        # url = 'https://api.odysee.com/user/new'
-        url = urljoin(LOGIN_URL, '/user/new')
+        # NOTE: override base url.
+        url = self._base_url if self._base_url else LOGIN_URL
+        url = urljoin(url, '/user/new')
         async with ScraperSession() as s:
             r = await s._request(
                 METH_POST,
