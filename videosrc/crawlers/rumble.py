@@ -49,11 +49,49 @@ def parse_date(s):
     return datetime.strptime(s, '%Y-%m-%dT%H:%M:%S%z')
 
 
+def extract_sources(video_details, VideoSourceModel):
+    sources = []
+    try:
+        mp4s = video_details['ua']['mp4'].values()
+
+    except AttributeError:
+        LOGGER.warning('No mp4 videos!')
+
+    else:
+        sources.extend([
+            VideoSourceModel(
+                extern_id=md5sum(src['url']),
+                width=src['meta']['w'],
+                height=src['meta']['h'],
+                size=src['meta']['size'],
+                mime=url2mime(src['url']),
+                url=src['url'],
+                original=src,
+            ) for src in mp4s
+        ])
+
+    try:
+        live_stream = video_details['ua']['hls']
+
+    except KeyError:
+        LOGGER.warning('No live streams!')
+
+    else:
+        sources.append(
+            VideoSourceModel(
+                extern_id=md5sum(live_stream['url']),
+                url=live_stream['url'],
+                original=live_stream,
+            )
+        )
+
+    return sources
+
+
 class RumbleCrawler(Crawler):
     @staticmethod
     def check_url(url):
-        urlp = urlparse(url)
-        return urlp.netloc.endswith('rumble.com')
+        return urlparse(url).netloc.endswith('rumble.com')
 
     async def _iter_videos(self, url, page):
         state = self._state
@@ -65,36 +103,7 @@ class RumbleCrawler(Crawler):
                 LOGGER.info('Video published before given state')
                 break
 
-            sources = []
-            try:
-                mpfours = video_details['ua']['mp4'].values()
-
-            except AttributeError:
-                LOGGER.warning('No mp4 videos!')
-
-            else:
-                sources.extend([
-                    self.VideoSourceModel(
-                        extern_id=md5sum(src['url']),
-                        width=src['meta']['w'],
-                        height=src['meta']['h'],
-                        size=src['meta']['size'],
-                        mime=url2mime(src['url']),
-                        url=src['url'],
-                        original=src,
-                    ) for src in mpfours
-                ])
-
-            live_stream = video_details['ua'].get('hls')
-            if live_stream:
-                sources.append(
-                    self.VideoSourceModel(
-                        extern_id=md5sum(live_stream['url']),
-                        url=live_stream['url'],
-                        original=live_stream,
-                    )
-                )
-
+            sources = extract_sources(video_details, self.VideoSourceModel)
             if not sources:
                 LOGGER.warning('Video has no sources! Skipping...')
                 continue

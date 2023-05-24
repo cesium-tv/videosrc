@@ -157,7 +157,8 @@ class MediaInfo:
     def video(self):
         if self._video is None:
             with requests.get(
-                self.url, proxies=self._proxies, stream=True) as r:
+                self.url, proxies=self._proxies, stream=True
+            ) as r:
                 self._headers = r.headers
                 try:
                     self._video = av.open(r.raw)

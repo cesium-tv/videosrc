@@ -17,7 +17,9 @@ LOGGER.addHandler(logging.NullHandler())
 
 def split_description(s):
     # First line is title, the rest are description.
-    lines = [ll for ll in [l.strip() for l in s.split('\n')] if ll]
+    lines = [
+        ll for ll in [l.strip() for l in s.split('\n')] if ll  # noqa: E741
+    ]
     return lines[0], '\n'.join(lines[1:]) or None
 
 
@@ -27,8 +29,7 @@ class TwitterCrawler(Crawler):
 
     @staticmethod
     def check_url(url):
-        urlp = urlparse(url)
-        return urlp.netloc.endswith('twitter.com')
+        return urlparse(url).netloc.endswith('twitter.com')
 
     async def _iter_videos(self, url, items, max_count=100, max_days=None):
         state = self._state
@@ -36,9 +37,11 @@ class TwitterCrawler(Crawler):
             try:
                 media = item.media[0]
             except (TypeError, IndexError):
+                LOGGER.debug('Skipping tweet without media: %s', item.id)
                 continue
 
             if not isinstance(media, sntwitter.Video):
+                LOGGER.debug('Skipping tweet without video: %s', item.id)
                 continue
 
             if state and item.id < state:
@@ -65,7 +68,8 @@ class TwitterCrawler(Crawler):
             try:
                 title, desc = split_description(item.rawContent)
             except Exception:
-                LOGGER.warning('Error splitting title', exc_info=True)
+                LOGGER.warning(
+                    'Error splitting title %s', item.rawContent, exc_info=True)
                 title, desc = item.rawContent, None
 
             video = self.VideoModel(

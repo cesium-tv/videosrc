@@ -28,8 +28,7 @@ class OdyseeCrawler(Crawler):
 
     @staticmethod
     def check_url(url):
-        urlp = urlparse(url)
-        return urlp.netloc.endswith('odysee.com')
+        return urlparse(url).netloc.endswith('odysee.com')
 
     async def _make_request(self, method, params):
         url = API_URL

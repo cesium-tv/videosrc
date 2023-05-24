@@ -10,8 +10,10 @@ from pyppeteer.errors import PyppeteerError
 from aiohttp_scraper import ScraperSession
 from bs4 import BeautifulSoup
 
-from videosrc.utils import get_tag_text, md5sum, url2mime
-from videosrc.crawlers.rumble import get_embed_details, parse_date
+from videosrc.utils import get_tag_text, md5sum
+from videosrc.crawlers.rumble import (
+    get_embed_details, parse_date, extract_sources,
+)
 from videosrc.crawlers.base import Crawler
 from videosrc.errors import StateReached
 
@@ -46,8 +48,7 @@ class TimcastCrawler(Crawler):
 
     @staticmethod
     def check_url(url):
-        urlp = urlparse(url)
-        return urlp.netloc.endswith('timcast.com')
+        return urlparse(url).netloc.endswith('timcast.com')
 
     async def _login(self, url, username, password, headless=True,
                      login_timeout=12000):
@@ -139,17 +140,11 @@ class TimcastCrawler(Crawler):
             if state and pubDate < state:
                 raise StateReached()
 
-            sources = [
-                self.VideoSourceModel(
-                    extern_id=md5sum(src['url']),
-                    width=src['meta']['w'],
-                    height=src['meta']['h'],
-                    size=src['meta']['size'],
-                    mime=url2mime(src['url']),
-                    url=src['url'],
-                    original=src,
-                ) for src in video_details['ua']['mp4'].values()
-            ]
+            sources = extract_sources(video_details, self.VideoSourceModel)
+            if not sources:
+                LOGGER.warning('Video has no sources! Skipping...')
+                continue
+
             video = self.VideoModel(
                 extern_id=md5sum(video_page_url),
                 title=description,
@@ -179,7 +174,7 @@ class TimcastCrawler(Crawler):
                     async for video in self._iter_page_videos(url, page):
                         yield video
                 except StateReached:
-                    LOGGER.debug('Aborting', exc_info=True)
+                    LOGGER.debug('Aborting, state reached', exc_info=True)
                     break
                 page_num += 1
                 page_url = url + f'page/{page_num}/'

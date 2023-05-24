@@ -33,7 +33,7 @@ class Crawler(ABC):
 
     def __setattr__(self, name, value):
         # NOTE: mock property with setter only.
-        if name =='on_state':
+        if name == 'on_state':
             assert callable(value), 'State saving function must be callable'
             self._save_state.append(value)
             return
@@ -63,8 +63,8 @@ class Crawler(ABC):
         raise NotImplementedError()
 
     async def iter_videos(self, *args, **kwargs):
-        now = datetime.now()
         max_count = kwargs.pop('max_count', None)
+
         try:
             max_days = int(kwargs['max_days'])
             max_days = datetime.now() - timedelta(days=max_days)
@@ -75,23 +75,25 @@ class Crawler(ABC):
         except KeyError:
             max_days = None
 
-        async for i, video in aenumerate(self._iter_videos(*args, **kwargs)):
-            try:
-                yield video
+        try:
+            async for i, video in aenumerate(self._iter_videos(*args,
+                                                               **kwargs)):
+                try:
+                    yield video
 
-            except StateReached:
-                break
+                except Exception as e:
+                    LOGGER.exception(e)
 
-            except Exception as e:
-                LOGGER.exception(e)
+                else:
+                    if max_count is not None and i >= max_count:
+                        LOGGER.info('Reached max video count')
+                        break
+                    if max_days is not None and video.published >= max_days:
+                        LOGGER.info('Reached max video age')
+                        break
 
-            else:
-                if max_count is not None and i >= max_count:
-                    LOGGER.info('Reached max item count')
-                    break
-                if max_days is not None and now <= max_days:
-                    LOGGER.info('Reached max item age')
-                    break
+        except StateReached:
+            LOGGER.info('Aborting, state reached', exc_info=True)
 
         await self.save_state()
 
