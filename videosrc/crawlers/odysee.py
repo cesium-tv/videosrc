@@ -5,7 +5,7 @@ import logging
 from urllib.parse import urlparse, urljoin
 from datetime import datetime
 
-from aiohttp.hdrs import METH_POST
+from aiohttp.hdrs import METH_POST, METH_HEAD
 from aiohttp_scraper import ScraperSession
 
 from videosrc.crawlers.base import Crawler
@@ -271,15 +271,26 @@ class OdyseeCrawler(Crawler):
                     int(item['value']['release_time']))
                 stream = await self._make_request(
                     'get', {'uri': item['short_url']})
+                streaming_url = stream['streaming_url']
+                async with ScraperSession() as s:
+                    r = await s._request(
+                        headers={'Origin': 'https://odysee.com'},
+                        METH_HEAD,
+                        streaming_url,
+                        proxy=self._proxy,
+                    )
+                    streaming_url = r.headers['Location']
+
                 source = self.VideoSourceModel(
                     extern_id=item['claim_id'],
-                    url=stream['streaming_url'],
+                    url=streaming_url,
                     size=item['value']['source']['size'],
                     mime=item['value']['source']['media_type'],
                     width=item['value']['video']['width'],
                     height=item['value']['video']['height'],
                     original=item,
                 )
+
                 video = self.VideoModel(
                     extern_id=item['claim_id'],
                     title=item['value']['title'],
