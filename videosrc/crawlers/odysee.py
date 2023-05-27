@@ -280,11 +280,12 @@ class OdyseeCrawler(Crawler):
                         headers={'Origin': 'https://odysee.com'},
                         allow_redirects=False,
                     )
-                    streaming_url = r.headers['Location']
+                    redirect_url = r.headers['Location']
+                    redirect_url = urljoin(streaming_url, redirect_url)
 
                 source = self.VideoSourceModel(
                     extern_id=item['claim_id'],
-                    url=streaming_url,
+                    url=redirect_url,
                     size=item['value']['source']['size'],
                     mime=item['value']['source']['media_type'],
                     width=item['value']['video']['width'],
