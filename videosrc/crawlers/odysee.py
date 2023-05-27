@@ -274,10 +274,11 @@ class OdyseeCrawler(Crawler):
                 streaming_url = stream['streaming_url']
                 async with ScraperSession() as s:
                     r = await s._request(
-                        headers={'Origin': 'https://odysee.com'},
                         METH_HEAD,
                         streaming_url,
                         proxy=self._proxy,
+                        headers={'Origin': 'https://odysee.com'},
+                        allow_redirects=False,
                     )
                     streaming_url = r.headers['Location']
 
@@ -324,6 +325,8 @@ class OdyseeCrawler(Crawler):
         # https://odysee.com/@timcast:c
         urlp = urlparse(url)
         m = re.match(r'/@(\w+):(\w)', urlp.path)
+        if not m:
+            raise InvalidOptionError('Invalid URL')
         channel_name = m.group(1)
         hash = m.group(2)
         lbry_url = f'lbry://@{channel_name}#{hash}'

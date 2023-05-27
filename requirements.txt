@@ -1,4 +1,4 @@
-aiohttp-scraper==0.1.4
+aiohttp-scraper @ git+https://github.com/cesium-tv/aiohttp-scraper.git@allow-redirects
 pyppeteer==1.0.2
 beautifulsoup4==4.10.0
 requests==2.25.1
