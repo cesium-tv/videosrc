@@ -45,7 +45,7 @@ def hostname_to_ip(url):
     # 'localhost' but it will accept an IP.
     urlp = urlparse(url)
     hostname = socket.gethostbyname(urlp.hostname)
-    str(urlunparse(urlp._replace(netloc=f'{hostname}:{urlp.port}')))
+    return str(urlunparse(urlp._replace(netloc=f'{hostname}:{urlp.port}')))
 
 
 async def pyppeteer_browser(*args, **kwargs):
