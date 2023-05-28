@@ -15,6 +15,10 @@ class InvalidOptionError(OptionError):
     pass
 
 
+class InvalidURLError(InvalidOptionError):
+    pass
+
+
 class StateReached(Exception):
     def __init__(self):
         super().__init__('State reached')

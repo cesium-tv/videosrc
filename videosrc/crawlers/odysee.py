@@ -9,7 +9,7 @@ from aiohttp.hdrs import METH_POST, METH_HEAD
 from aiohttp_scraper import ScraperSession
 
 from videosrc.crawlers.base import Crawler
-from videosrc.errors import AuthenticationError
+from videosrc.errors import AuthenticationError, InvalidURLError
 
 
 LOGGER = logging.getLogger(__name__)
@@ -327,7 +327,7 @@ class OdyseeCrawler(Crawler):
         urlp = urlparse(url)
         m = re.match(r'/@(\w+):(\w)', urlp.path)
         if not m:
-            raise InvalidOptionError('Invalid URL')
+            raise InvalidURLError('Invalid URL, did not match pattern')
         channel_name = m.group(1)
         hash = m.group(2)
         lbry_url = f'lbry://@{channel_name}#{hash}'

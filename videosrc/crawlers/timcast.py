@@ -1,3 +1,4 @@
+import os
 import re
 import time
 import asyncio
@@ -21,6 +22,8 @@ from videosrc.errors import StateReached
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
+PYPPETEER_WS_URL = os.getenv('PYPPETEER_WS_URL')
+
 RUMBLE_DOMAIN = re.compile(r'^https://rumble.com/embed/')
 JSON_EXTRACT = re.compile(r'g\.f\["\w{6,7}"\]=({.*}),loaded:d\(\)')
 JSON_TRIM = re.compile(r'^(.*)"path":.*,("w":.*$)')
@@ -29,11 +32,32 @@ P_FIELD = '#user_pass'
 SUBMIT = '#wp-submit'
 
 
-def _no_images(request):
-    if request.resourceType() == 'image':
+def _no_images_or_css(request):
+    if request.resourceType() in ('image', 'stylesheet', 'font'):
         request.abort_()
     else:
         request.continue_()
+
+
+async def pyppeteer_browser(*args, **kwargs):
+    headless = kwargs.pop('headless', False)
+
+    if PYPPETEER_WS_URL:
+        LOGGER.info('Using remote chrome instance')
+        browser = await pyppeteer.connect(PYPPETEER_WS_URL, **kwargs)
+
+    else:
+        LOGGER.info('Lanching chrome instance')
+        browser = await pyppeteer.launch(
+            headless=headless,
+            args=args,
+            handleSIGINT=False,
+            handleSIGTERM=False,
+            handleSIGHUP=False,
+            **kwargs,
+        )
+
+    return browser
 
 
 class TimcastCrawler(Crawler):
@@ -54,24 +78,20 @@ class TimcastCrawler(Crawler):
                      login_timeout=12000):
         args = [
             '--start-maximized',
-            '--no-sandbox',
+            # '--no-sandbox',
             '--disable-setuid-sandbox',
         ]
         if self._proxy:
             args.append(f'--proxy-server={self._proxy}')
-        browser = await pyppeteer.launch(
-            headless=headless,
-            args=args,
-            ignoreHTTPSError=True,
-            handleSIGINT=False,
-            handleSIGTERM=False,
-            handleSIGHUP=False
-        )
 
+        browser = await pyppeteer_browser(
+            *args, headless=headless, ignoreHTTPSError=True)
         page = await browser.newPage()
 
         try:
             await page.setViewport({'width': 1366, 'height': 768})
+            await page.setRequestInterception(True)
+            page.on('request', _no_images_or_css)
 
             LOGGER.debug('Opening url: %s', url)
             await page.goto(url, timeout=login_timeout, waitFor='networkidle2')
@@ -86,6 +106,7 @@ class TimcastCrawler(Crawler):
             cookieStr = []
             for cookie in await page.cookies():
                 cookieStr.append(f"{cookie['name']}={cookie['value']}")
+
             return {'headers': {'Cookies': '; '.join(cookieStr)}}
 
         finally:
