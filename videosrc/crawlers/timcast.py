@@ -100,8 +100,8 @@ class TimcastCrawler(Crawler):
 
         try:
             await page.setViewport({'width': 1366, 'height': 768})
-            await page.setRequestInterception(True)
-            page.on('request', _no_images_or_css)
+            # await page.setRequestInterception(True)
+            # page.on('request', _no_images_or_css)
 
             LOGGER.debug('Opening url: %s', url)
             await page.goto(url, timeout=login_timeout, waitFor='networkidle2')
