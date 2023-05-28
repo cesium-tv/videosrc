@@ -44,7 +44,7 @@ class Crawler(ABC):
         raise NotImplementedError()
 
     async def save_state(self):
-        if not callable(self._save_state):
+        if len(self._save_state) == 0:
             LOGGER.info('No state saving function')
             return
 
