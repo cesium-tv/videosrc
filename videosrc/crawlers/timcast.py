@@ -43,8 +43,9 @@ async def pyppeteer_browser(*args, **kwargs):
     headless = kwargs.pop('headless', False)
 
     if PYPPETEER_WS_URL:
-        LOGGER.info('Using remote chrome instance')
-        browser = await pyppeteer.connect(PYPPETEER_WS_URL, **kwargs)
+        LOGGER.info('Using remote chrome instance: %s', PYPPETEER_WS_URL)
+        browser = await pyppeteer.connect(
+            browserURL=PYPPETEER_WS_URL, **kwargs)
 
     else:
         LOGGER.info('Lanching chrome instance')
