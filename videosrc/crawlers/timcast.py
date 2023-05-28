@@ -22,7 +22,7 @@ from videosrc.errors import StateReached
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
-PYPPETEER_WS_URL = os.getenv('PYPPETEER_WS_URL')
+PYPPETEER_BROWSER_URL = os.getenv('PYPPETEER_BROWSER_URL')
 
 RUMBLE_DOMAIN = re.compile(r'^https://rumble.com/embed/')
 JSON_EXTRACT = re.compile(r'g\.f\["\w{6,7}"\]=({.*}),loaded:d\(\)')
@@ -42,10 +42,10 @@ def _no_images_or_css(request):
 async def pyppeteer_browser(*args, **kwargs):
     headless = kwargs.pop('headless', False)
 
-    if PYPPETEER_WS_URL:
-        LOGGER.info('Using remote chrome instance: %s', PYPPETEER_WS_URL)
+    if PYPPETEER_BROWSER_URL:
+        LOGGER.info('Using remote chrome instance: %s', PYPPETEER_BROWSER_URL)
         browser = await pyppeteer.connect(
-            browserURL=PYPPETEER_WS_URL, **kwargs)
+            browserURL=PYPPETEER_BROWSER_URL, **kwargs)
 
     else:
         LOGGER.info('Lanching chrome instance')
