@@ -3,8 +3,9 @@ import re
 import time
 import asyncio
 import logging
+import socket
 
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlunparse
 
 import pyppeteer
 from pyppeteer.errors import PyppeteerError
@@ -39,13 +40,21 @@ def _no_images_or_css(request):
         request.continue_()
 
 
+def hostname_to_ip(url):
+    # NOTE: chrome won't accept a connection with a Host header other than
+    # 'localhost' but it will accept an IP.
+    urlp = urlparse(url)
+    hostname = socket.gethostbyname(urlp.hostname)
+    str(urlunparse(urlp._replace(netloc=f'{hostname}:{urlp.port}')))
+
+
 async def pyppeteer_browser(*args, **kwargs):
     headless = kwargs.pop('headless', False)
 
     if PYPPETEER_BROWSER_URL:
-        LOGGER.info('Using remote chrome instance: %s', PYPPETEER_BROWSER_URL)
-        browser = await pyppeteer.connect(
-            browserURL=PYPPETEER_BROWSER_URL, **kwargs)
+        url = hostname_to_ip(PYPPETEER_BROWSER_URL)
+        LOGGER.info('Using remote chrome instance: %s', url)
+        browser = await pyppeteer.connect(browserURL=url, **kwargs)
 
     else:
         LOGGER.info('Lanching chrome instance')
