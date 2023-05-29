@@ -55,7 +55,7 @@ def extract_sources(video_details, VideoSourceModel):
         mp4s = video_details['ua']['mp4'].values()
 
     except AttributeError:
-        LOGGER.warning('No mp4 videos!')
+        LOGGER.debug('No mp4 videos!')
 
     else:
         sources.extend([
@@ -74,7 +74,7 @@ def extract_sources(video_details, VideoSourceModel):
         live_stream = video_details['ua']['hls']
 
     except KeyError:
-        LOGGER.warning('No live streams!')
+        LOGGER.debug('No live streams!')
 
     else:
         sources.append(
@@ -84,6 +84,9 @@ def extract_sources(video_details, VideoSourceModel):
                 original=live_stream,
             )
         )
+
+    if not sources:
+        LOGGER.warning('No sources')
 
     return sources
 
