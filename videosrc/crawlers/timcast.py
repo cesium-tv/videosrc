@@ -55,6 +55,7 @@ async def pyppeteer_browser(*args, **kwargs):
         url = hostname_to_ip(PYPPETEER_BROWSER_URL)
         LOGGER.info('Using remote chrome instance: %s', url)
         browser = await pyppeteer.connect(browserURL=url, **kwargs)
+        created = False
 
     else:
         LOGGER.info('Lanching chrome instance')
@@ -66,8 +67,9 @@ async def pyppeteer_browser(*args, **kwargs):
             handleSIGHUP=False,
             **kwargs,
         )
+        created = True
 
-    return browser
+    return browser, created
 
 
 class TimcastCrawler(Crawler):
@@ -94,7 +96,7 @@ class TimcastCrawler(Crawler):
         if self._proxy:
             args.append(f'--proxy-server={self._proxy}')
 
-        browser = await pyppeteer_browser(
+        browser, created = await pyppeteer_browser(
             *args, headless=headless, ignoreHTTPSError=True)
         page = await browser.newPage()
 
@@ -121,7 +123,10 @@ class TimcastCrawler(Crawler):
 
         finally:
             await page.close()
-            await browser.close()
+            if created:
+                await browser.close()
+            else:
+                await browser.disconnect()
 
     async def login(self, url, username, password, **kwargs):
         retry = kwargs.pop('retry', 3)
