@@ -17,7 +17,7 @@ LOGGER.addHandler(logging.NullHandler())
 
 LOGIN_URL = 'https://api.odysee.com/api/v1/proxy'
 API_URL = 'https://api.na-backend.odysee.com/api/v1/proxy'
-PAGE_SIZE = 20
+PAGE_SIZE = 36
 
 
 class OdyseeCrawler(Crawler):
@@ -247,7 +247,8 @@ class OdyseeCrawler(Crawler):
     # },
     async def _iter_videos(self, channel_id):
         page_number = 1
-        release_time = f'>{self._state}'
+        state = self._state or 0
+        release_time = f'>{state}'
         while True:
             result = await self._make_request('claim_search', {
                 "page_size": PAGE_SIZE,
@@ -272,20 +273,25 @@ class OdyseeCrawler(Crawler):
                 stream = await self._make_request(
                     'get', {'uri': item['short_url']})
                 streaming_url = stream['streaming_url']
-                async with ScraperSession() as s:
-                    r = await s._request(
-                        METH_HEAD,
-                        streaming_url,
-                        proxy=self._proxy,
-                        headers={'Origin': 'https://odysee.com'},
-                        allow_redirects=False,
-                    )
-                    redirect_url = r.headers['Location']
-                    redirect_url = urljoin(streaming_url, redirect_url)
+
+                try:
+                    async with ScraperSession() as s:
+                        r = await s._request(
+                            METH_HEAD,
+                            streaming_url,
+                            proxy=self._proxy,
+                            headers={'Origin': 'https://odysee.com'},
+                            allow_redirects=False,
+                            retries=1,
+                        )
+                        redirect_url = r.headers['Location']
+                        streaming_url = urljoin(streaming_url, redirect_url)
+                except:
+                    LOGGER.warning('Could not convert url %s', streaming_url)
 
                 source = self.VideoSourceModel(
                     extern_id=item['claim_id'],
-                    url=redirect_url,
+                    url=streaming_url,
                     size=item['value']['source']['size'],
                     mime=item['value']['source']['media_type'],
                     width=item['value']['video']['width'],
