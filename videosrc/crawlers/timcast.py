@@ -146,10 +146,9 @@ class TimcastCrawler(Crawler):
                 LOGGER.exception('Login failed, retrying')
                 time.sleep(3 ** i)
 
-    async def _iter_page_videos(self, url, page):
+    async def _iter_page_videos(self, url, page, state):
         grid = page.find(
             'div', class_='t-grid:s:fit:2 t-grid:m:fit:4 t-pad:25pc:top')
-        state = self._state
         for article in grid.find_all('div', class_='article'):
             video_link = article.find('a', class_='image')
             thumbnail = video_link.img['src']
@@ -203,21 +202,25 @@ class TimcastCrawler(Crawler):
 
     async def _iter_videos(self, url, page):
         page_num = 1
-        async with ScraperSession() as s:
-            while True:
-                LOGGER.debug('Scraping page %i', page_num)
-                try:
-                    async for video in self._iter_page_videos(url, page):
-                        yield video
-                except StateReached:
-                    LOGGER.debug('Aborting, state reached', exc_info=True)
-                    break
-                page_num += 1
-                page_url = url + f'page/{page_num}/'
-                urlp = urlparse(page_url)
-                if not page.find('a', href=urlp.path[:-1]):
-                    LOGGER.debug('No more pages')
-                    break
+        state = self._state
+        while True:
+            LOGGER.debug('Scraping page %i', page_num)
+            try:
+                async for video in self._iter_page_videos(url, page, state):
+                    yield video
+
+            except StateReached:
+                LOGGER.debug('Aborting, state reached', exc_info=True)
+                break
+
+            page_num += 1
+            page_url = url + f'page/{page_num}/'
+            urlp = urlparse(page_url)
+            if not page.find('a', href=urlp.path[:-1]):
+                LOGGER.debug('No more pages')
+                break
+
+            async with ScraperSession() as s:
                 html = await s.get_html(
                     page_url, proxy=self._proxy, **self.auth)
                 page = BeautifulSoup(html, 'html.parser')
