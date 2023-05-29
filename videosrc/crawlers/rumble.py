@@ -93,8 +93,7 @@ class RumbleCrawler(Crawler):
     def check_url(url):
         return urlparse(url).netloc.endswith('rumble.com')
 
-    async def _iter_videos(self, url, page):
-        state = self._state
+    async def _iter_page_videos(self, url, page, state):
         for li in page.find_all('li', class_='video-listing-entry'):
             url = urljoin(url, li.article.a['href'])
             video_details = await get_video_details(url, proxy=self._proxy)
@@ -127,6 +126,30 @@ class RumbleCrawler(Crawler):
             else:
                 self._state = max(self._state, published) if self._state \
                                                           else published
+
+    async def _iter_videos(self, url, page):
+        state = self._state
+        page_num = 1
+        while True:
+            LOGGER.debug('Scraping page %i', page_num)
+            try:
+                async for video in self._iter_page_videos(url, page, state):
+                    yield video
+
+            except StateReached:
+                LOGGER.debug('Aborting, state reached', exc_info=True)
+                break
+
+            page_num += 1
+            page_url = url + f'?page={page_num}'
+            urlp = urlparse(page_url)
+            if not page.find('a', href=urlp.path):
+                LOGGER.debug('No more pages')
+                break
+
+            async with ScraperSession() as s:
+                html = await s.get_html(page_url, proxy=self._proxy)
+                page = BeautifulSoup(html, 'html.parser')
 
     async def crawl(self, url, **kwargs):
         # https://rumble.com/user/vivafrei
