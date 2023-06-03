@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from videosrc.utils import md5sum, url2mime
 from videosrc.crawlers.base import Crawler
+from videosrc.errors import StateReached
 
 
 LOGGER = logging.getLogger(__name__)
