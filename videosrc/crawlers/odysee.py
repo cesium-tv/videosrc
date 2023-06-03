@@ -286,7 +286,8 @@ class OdyseeCrawler(Crawler):
                         )
                         redirect_url = r.headers['Location']
                         streaming_url = urljoin(streaming_url, redirect_url)
-                except:
+
+                except Exception:
                     LOGGER.warning('Could not convert url %s', streaming_url)
 
                 source = self.VideoSourceModel(
