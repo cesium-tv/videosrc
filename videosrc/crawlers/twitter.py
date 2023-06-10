@@ -16,11 +16,14 @@ LOGGER.addHandler(logging.NullHandler())
 
 
 def split_description(s):
-    # First line is title, the rest are description.
-    lines = [
-        ll for ll in [l.strip() for l in s.split('\n')] if ll  # noqa: E741
-    ]
-    return lines[0], '\n'.join(lines[1:]) or None
+    # First line or sentence is title, the rest are description.
+    for splitter in ('\n', '.'):
+        lines = [
+            ll for ll in [l.strip() for l in s.split(splitter)] if ll  # noqa: E741
+        ]
+        if len(lines) > 1:
+            break
+    return lines[0], splitter.join(lines[1:]) or None
 
 
 class TwitterCrawler(Crawler):

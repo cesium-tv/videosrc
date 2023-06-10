@@ -30,8 +30,8 @@ def md5sum(s):
     return md5(s).hexdigest()
 
 
-def get_tag_text(o, name):
-    tag = o.find(name)
+def get_tag_text(o, name, *args, **kwargs):
+    tag = o.find(name, *args, **kwargs)
     return tag and tag.text
 
 

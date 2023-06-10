@@ -41,7 +41,7 @@ Uses web scraping to fetch video information. Utilizes Chromium to allow Javascr
 
 Timcast
 *******
-Uses pyppeteer to login and scrape video urls, then fetches video data from Rumble.
+Uses pyppeteer to login then uses the authentication cookie with aiohttp_scraper to scrape video urls, then fetches video data from Rumble.
 
 Twitter
 *******
