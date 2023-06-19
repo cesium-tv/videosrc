@@ -149,6 +149,8 @@ class TimcastCrawler(Crawler):
     async def _iter_page_videos(self, url, page, state):
         grid = page.find(
             'div', class_='t-grid:s:fit:2 t-grid:m:fit:4 t-pad:25pc:top')
+        if grid is None:
+            return
         for article in grid.find_all('div', class_='article'):
             video_link = article.find('a', class_='image')
             thumbnail = video_link.img['src']
