@@ -16,6 +16,9 @@ LOGGER.addHandler(logging.NullHandler())
 
 
 def split_description(s):
+    if len(s) <= 100:
+        return s, None
+
     # First line or sentence is title, the rest are description.
     for splitter in ('\n', '.'):
         lines = [
@@ -23,6 +26,7 @@ def split_description(s):
         ]
         if len(lines) > 1:
             break
+
     return lines[0], splitter.join(lines[1:]) or None
 
 
